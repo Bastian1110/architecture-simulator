@@ -15,8 +15,12 @@ interface RouteResult {
   errored: boolean
 }
 
-function getOutgoing(nodeId: string, edges: AppEdge[]) {
-  return edges.filter(e => e.source === nodeId)
+function getMainOutgoing(nodeId: string, edges: AppEdge[]) {
+  return edges.filter(e => e.source === nodeId && !e.data?.required)
+}
+
+function getRequiredOutgoing(nodeId: string, edges: AppEdge[]) {
+  return edges.filter(e => e.source === nodeId && e.data?.required === true)
 }
 
 function pickTarget(
@@ -25,14 +29,14 @@ function pickTarget(
   algorithm: LBAlgorithm,
   counters: Map<string, number>,
   nodeLoads: Map<string, { handled: number; capacity: number }>,
-): { edge: AppEdge | null } {
-  const outgoing = getOutgoing(nodeId, edges)
-  if (outgoing.length === 0) return { edge: null }
+): AppEdge | null {
+  const outgoing = getMainOutgoing(nodeId, edges)
+  if (outgoing.length === 0) return null
 
   if (algorithm === 'roundRobin') {
     const idx = (counters.get(nodeId) ?? 0) % outgoing.length
     counters.set(nodeId, idx + 1)
-    return { edge: outgoing[idx] }
+    return outgoing[idx]
   }
 
   if (algorithm === 'leastConnections') {
@@ -42,17 +46,20 @@ function pickTarget(
       const load = nodeLoads.get(e.target)?.handled ?? 0
       if (load < bestLoad) { best = e; bestLoad = load }
     }
-    return { edge: best }
+    return best
   }
 
-  // random
-  return { edge: outgoing[Math.floor(Math.random() * outgoing.length)] }
+  return outgoing[Math.floor(Math.random() * outgoing.length)]
+}
+
+function serverTotalMs(d: { processingTimeMs: number; middleware?: Array<{ latencyMs: number }> }): number {
+  return d.processingTimeMs + (d.middleware ?? []).reduce((s, m) => s + m.latencyMs, 0)
 }
 
 function nodeCapacity(node: AppNode, tickMs: number): number {
   const d = node.data
   if (d.kind === 'server') {
-    return Math.max(1, Math.floor(d.cpuCores * tickMs / d.processingTimeMs))
+    return Math.max(1, Math.floor(d.cpuCores * tickMs / serverTotalMs(d)))
   }
   if (d.kind === 'database') {
     return Math.max(1, Math.floor(d.maxConnections * tickMs / d.queryTimeMs))
@@ -70,7 +77,7 @@ function routeRequest(
   tickMs: number,
   depth: number,
 ): RouteResult {
-  if (depth > 12) return { latency: 0, errored: false }
+  if (depth > 16) return { latency: 0, errored: false }
 
   const node = nodes.find(n => n.id === nodeId)
   if (!node) return { latency: 0, errored: false }
@@ -85,45 +92,59 @@ function routeRequest(
 
   switch (d.kind) {
     case 'client': {
-      const out = getOutgoing(nodeId, edges)
+      const out = getMainOutgoing(nodeId, edges)
       nextEdge = out[Math.floor(Math.random() * out.length)] ?? null
       break
     }
     case 'cdn': {
       latency += d.edgeLatencyMs
-      const hit = Math.random() < d.hitRate
-      if (!hit) {
-        const out = getOutgoing(nodeId, edges)
+      if (Math.random() >= d.hitRate) {
+        const out = getMainOutgoing(nodeId, edges)
         nextEdge = out[Math.floor(Math.random() * out.length)] ?? null
       }
       break
     }
     case 'cache': {
       latency += d.lookupTimeMs
-      const hit = Math.random() < d.hitRate
-      if (!hit) {
-        const out = getOutgoing(nodeId, edges)
+      if (Math.random() >= d.hitRate) {
+        const out = getMainOutgoing(nodeId, edges)
         nextEdge = out[Math.floor(Math.random() * out.length)] ?? null
       }
       break
     }
     case 'loadBalancer': {
       latency += 2
-      const { edge } = pickTarget(nodeId, edges, d.algorithm, counters, nodeLoads)
-      nextEdge = edge
+      nextEdge = pickTarget(nodeId, edges, d.algorithm, counters, nodeLoads)
       break
     }
     case 'server': {
-      latency += d.processingTimeMs
+      latency += serverTotalMs(d)
       errored = Math.random() < d.errorRate
-      const out = getOutgoing(nodeId, edges)
+
+      // Required side calls (e.g. auth server, validation service)
+      for (const reqEdge of getRequiredOutgoing(nodeId, edges)) {
+        edgeLoads.set(reqEdge.id, (edgeLoads.get(reqEdge.id) ?? 0) + 1)
+        const side = routeRequest(reqEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1)
+        latency += side.latency
+        if (side.errored) errored = true
+      }
+
+      const out = getMainOutgoing(nodeId, edges)
       if (out.length > 0) nextEdge = out[Math.floor(Math.random() * out.length)]
       break
     }
     case 'database': {
       latency += d.queryTimeMs
       errored = Math.random() < d.errorRate
-      const out = getOutgoing(nodeId, edges)
+      const out = getMainOutgoing(nodeId, edges)
+      if (out.length > 0) nextEdge = out[Math.floor(Math.random() * out.length)]
+      break
+    }
+    case 'storage': {
+      // Average of read/write latency (simplified model)
+      latency += Math.round((d.readLatencyMs + d.writeLatencyMs) / 2)
+      errored = Math.random() < d.errorRate
+      const out = getMainOutgoing(nodeId, edges)
       if (out.length > 0) nextEdge = out[Math.floor(Math.random() * out.length)]
       break
     }
@@ -151,6 +172,8 @@ function computeStatus(handled: number, capacity: number): NodeStatus {
   return 'overloaded'
 }
 
+const BATCH_CAP = 3000
+
 export function runTick(
   nodes: AppNode[],
   edges: AppEdge[],
@@ -164,12 +187,7 @@ export function runTick(
   const newCounters = new Map(roundRobinCounters)
 
   for (const node of nodes) {
-    nodeLoads.set(node.id, {
-      handled: 0,
-      capacity: nodeCapacity(node, tickMs),
-      latency: 0,
-      errors: 0,
-    })
+    nodeLoads.set(node.id, { handled: 0, capacity: nodeCapacity(node, tickMs), latency: 0, errors: 0 })
   }
 
   let totalCompleted = 0
@@ -181,17 +199,38 @@ export function runTick(
     const rps = (client.data as { rps: number }).rps
     const prev = newAccumulators.get(client.id) ?? 0
     const next = prev + rps * tickMs / 1000
-    const count = Math.floor(next)
-    newAccumulators.set(client.id, next - count)
+    const target = Math.floor(next)
+    newAccumulators.set(client.id, next - target)
+
+    // Sample at most BATCH_CAP requests and scale results proportionally
+    const count = Math.min(target, BATCH_CAP)
+    if (count === 0) continue
+    const scale = target / count
+
+    let batchLatency = 0
+    let batchErrors = 0
 
     for (let i = 0; i < count; i++) {
-      const result = routeRequest(
-        client.id, nodes, edges, nodeLoads, edgeLoads, newCounters, tickMs, 0
-      )
-      totalCompleted++
-      totalLatency += result.latency
-      if (result.errored) totalErrors++
+      const result = routeRequest(client.id, nodes, edges, nodeLoads, edgeLoads, newCounters, tickMs, 0)
+      batchLatency += result.latency
+      if (result.errored) batchErrors++
     }
+
+    // Scale metrics if we sampled
+    if (scale > 1) {
+      for (const load of nodeLoads.values()) {
+        load.handled = Math.round(load.handled * scale)
+        load.latency = Math.round(load.latency * scale)
+        load.errors = Math.round(load.errors * scale)
+      }
+      for (const [eid, c] of edgeLoads) {
+        edgeLoads.set(eid, Math.round(c * scale))
+      }
+    }
+
+    totalCompleted += Math.round(count * scale)
+    totalLatency += Math.round(batchLatency * scale)
+    totalErrors += Math.round(batchErrors * scale)
   }
 
   const tickSeconds = tickMs / 1000
@@ -206,7 +245,6 @@ export function runTick(
     })
   }
 
-  // Convert edge loads (per-tick count) to RPS
   const edgeTraffic = new Map<string, number>()
   for (const [edgeId, count] of edgeLoads) {
     edgeTraffic.set(edgeId, Math.round(count / tickSeconds))
@@ -216,13 +254,5 @@ export function runTick(
   const avgLatencyMs = totalCompleted > 0 ? Math.round(totalLatency / totalCompleted) : 0
   const errorRate = totalCompleted > 0 ? totalErrors / totalCompleted : 0
 
-  return {
-    nodeMetrics,
-    edgeTraffic,
-    totalRPS,
-    avgLatencyMs,
-    errorRate,
-    newAccumulators,
-    newCounters,
-  }
+  return { nodeMetrics, edgeTraffic, totalRPS, avgLatencyMs, errorRate, newAccumulators, newCounters }
 }

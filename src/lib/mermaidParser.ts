@@ -1,7 +1,7 @@
-import type { AppNode, AppEdge, NodeKind, NodeParams } from '../types'
+import type { AppNode, AppEdge, NodeKind, NodeParams, Protocol } from '../types'
 import { DEFAULT_NODE_DATA } from '../types'
 
-type Shape = 'rect' | 'round' | 'cylinder' | 'stadium' | 'circle' | 'diamond'
+type Shape = 'rect' | 'round' | 'cylinder' | 'stadium' | 'circle' | 'diamond' | 'subroutine'
 
 interface ParsedNode {
   id: string
@@ -9,9 +9,16 @@ interface ParsedNode {
   shape: Shape
 }
 
+interface ParsedEdge {
+  source: string
+  target: string
+  protocol: Protocol
+  required: boolean
+}
+
 interface ParseResult {
   nodes: ParsedNode[]
-  edges: Array<{ source: string; target: string }>
+  edges: ParsedEdge[]
   error?: string
 }
 
@@ -22,8 +29,11 @@ function clean(s: string): string {
 function parseNodeToken(token: string): ParsedNode | null {
   const t = token.trim()
   if (!t) return null
-
   let m: RegExpMatchArray | null
+
+  // [[label]] — subroutine → storage
+  m = t.match(/^([\w][\w-]*)\[\[(.+?)\]\]$/)
+  if (m) return { id: m[1], label: clean(m[2]), shape: 'subroutine' }
 
   // [(label)] — cylinder → database
   m = t.match(/^([\w][\w-]*)\[\((.+?)\)\]$/)
@@ -41,7 +51,7 @@ function parseNodeToken(token: string): ParsedNode | null {
   m = t.match(/^([\w][\w-]*)\[(.+?)\]$/)
   if (m) return { id: m[1], label: clean(m[2]), shape: 'rect' }
 
-  // (label) — rounded → service
+  // (label) — rounded → service/cdn
   m = t.match(/^([\w][\w-]*)\((.+?)\)$/)
   if (m) return { id: m[1], label: clean(m[2]), shape: 'round' }
 
@@ -62,17 +72,26 @@ function inferKind(node: ParsedNode): NodeKind {
   if (/client|browser|user|mobile|frontend/.test(text)) return 'client'
   if (/\blb\b|load.?bal|balancer/.test(text)) return 'loadBalancer'
   if (/cache|redis|memcach/.test(text)) return 'cache'
-  if (/cdn|cloudfront|edge|static/.test(text)) return 'cdn'
+  if (/cdn|cloudfront|edge.?server|static/.test(text)) return 'cdn'
+  if (/storage|s3|gcs|blob|minio|object.?stor/.test(text)) return 'storage'
   if (/\bdb\b|database|sql|postgres|mysql|mongo|dynamo|cassandra/.test(text)) return 'database'
-  if (/server|api|service|backend|worker|pod|node|app/.test(text)) return 'server'
+  if (/server|api|service|backend|worker|pod|node|app|auth/.test(text)) return 'server'
 
-  // Shape fallback
+  if (node.shape === 'subroutine') return 'storage'
   if (node.shape === 'cylinder') return 'database'
   if (node.shape === 'diamond') return 'loadBalancer'
   if (node.shape === 'circle') return 'client'
   if (node.shape === 'stadium') return 'cache'
 
   return 'server'
+}
+
+function inferProtocol(label: string): Protocol {
+  const l = label.toLowerCase()
+  if (/\bws\b|websocket/.test(l)) return 'websocket'
+  if (/\bgrpc\b/.test(l)) return 'grpc'
+  if (/\btcp\b/.test(l)) return 'tcp'
+  return 'http'
 }
 
 export function parseMermaid(input: string): ParseResult {
@@ -88,7 +107,7 @@ export function parseMermaid(input: string): ParseResult {
   }
 
   const nodeMap = new Map<string, ParsedNode>()
-  const edges: Array<{ source: string; target: string }> = []
+  const edges: ParsedEdge[] = []
 
   function register(n: ParsedNode) {
     if (!nodeMap.has(n.id)) nodeMap.set(n.id, n)
@@ -97,13 +116,25 @@ export function parseMermaid(input: string): ParseResult {
   for (const raw of lines.slice(1)) {
     if (/^(subgraph\b|end\b|style\s|classDef\s|class\s|linkStyle\s|click\s)/.test(raw)) continue
 
-    // Strip edge labels: |text|  and  --text-->
+    // Extract edge labels before stripping
+    const edgeLabelMatch = raw.match(/\|([^|]*)\|/)
+    const edgeLabel = edgeLabelMatch ? edgeLabelMatch[1] : ''
+
+    // Detect dotted arrow (required dependency)
+    const isDotted = /-.->|===>/.test(raw)
+
+    // Detect arrow type for protocol
+    let protocol: Protocol = edgeLabel ? inferProtocol(edgeLabel) : 'http'
+
+    // Strip edge labels and normalize arrows
     let line = raw
       .replace(/\|[^|]*\|/g, '')
       .replace(/--[^->{}\[\]()]+-->/g, '-->')
       .replace(/--[^->{}\[\]()]+---/g, '---')
+      .replace(/-\.->/g, '-->')
+      .replace(/===>/g, '-->')
 
-    const hasArrow = /-->|---|-.->|==>/.test(line)
+    const hasArrow = /-->|---/.test(line)
 
     if (!hasArrow) {
       const n = parseNodeToken(line)
@@ -111,8 +142,7 @@ export function parseMermaid(input: string): ParseResult {
       continue
     }
 
-    // Split on any arrow variant
-    const parts = line.split(/\s*(?:-->|---|-.->|==>)\s*/)
+    const parts = line.split(/\s*(?:-->|---)\s*/)
     if (parts.length < 2) continue
 
     const groups: string[][] = []
@@ -130,7 +160,7 @@ export function parseMermaid(input: string): ParseResult {
       for (const src of groups[i]) {
         for (const tgt of groups[i + 1]) {
           if (src !== tgt && !edges.find(e => e.source === src && e.target === tgt)) {
-            edges.push({ source: src, target: tgt })
+            edges.push({ source: src, target: tgt, protocol, required: isDotted })
           }
         }
       }
@@ -146,7 +176,7 @@ export function parseMermaid(input: string): ParseResult {
 
 function layoutNodes(
   parsedNodes: ParsedNode[],
-  parsedEdges: Array<{ source: string; target: string }>,
+  parsedEdges: ParsedEdge[],
 ): Map<string, { x: number; y: number }> {
   const outgoing = new Map<string, string[]>()
   const inCount = new Map<string, number>()
@@ -162,7 +192,6 @@ function layoutNodes(
     }
   }
 
-  // BFS level assignment from source nodes
   const levels = new Map<string, number>()
   const sources = parsedNodes.filter(n => (inCount.get(n.id) ?? 0) === 0)
   const queue = (sources.length > 0 ? sources : [parsedNodes[0]]).map(n => n.id)
@@ -198,10 +227,7 @@ function layoutNodes(
   for (const [level, ids] of byLevel) {
     const totalH = (ids.length - 1) * ROW_H
     ids.forEach((id, i) => {
-      positions.set(id, {
-        x: level * COL_W + 60,
-        y: i * ROW_H - totalH / 2 + 280,
-      })
+      positions.set(id, { x: level * COL_W + 60, y: i * ROW_H - totalH / 2 + 280 })
     })
   }
 
@@ -245,7 +271,13 @@ export function mermaidToGraph(input: string): LoadGraphResult {
       source: idMap.get(e.source)!,
       target: idMap.get(e.target)!,
       type: 'traffic' as const,
-      data: { currentRPS: 0, intensity: 0, active: false },
+      data: {
+        currentRPS: 0,
+        intensity: 0,
+        active: false,
+        protocol: e.protocol,
+        required: e.required,
+      },
       animated: false,
     }))
 

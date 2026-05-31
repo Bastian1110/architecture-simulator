@@ -8,7 +8,8 @@
   import PropertiesPanel from './components/PropertiesPanel.svelte'
   import MetricsPanel from './components/MetricsPanel.svelte'
   import MermaidImportModal from './components/MermaidImportModal.svelte'
-  import { mermaidModalOpen } from './stores/uiStore'
+  import MermaidExportModal from './components/MermaidExportModal.svelte'
+  import { mermaidModalOpen, mermaidExportOpen } from './stores/uiStore'
 
   import { nodes, edges, updateEdgeTraffic } from './stores/graphStore'
   import {
@@ -67,6 +68,9 @@
 
 {#if $mermaidModalOpen}
   <MermaidImportModal />
+{/if}
+{#if $mermaidExportOpen}
+  <MermaidExportModal />
 {/if}
 
 <div class="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden">

@@ -76,14 +76,17 @@
       </p>
 
       <!-- Shape reference -->
-      <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+      <div class="grid grid-cols-3 gap-1 text-[11px]">
         {#each [
           ['id[Label]',     'Server'],
-          ['id(Label)',     'Service'],
+          ['id(Label)',     'CDN'],
           ['id[(Label)]',   'Database'],
           ['id([Label])',   'Cache'],
           ['id((Label))',   'Client'],
           ['id{Label}',     'Load Balancer'],
+          ['id[[Label]]',   'Storage'],
+          ['-.->',          'Required call'],
+          ['-- ws -->',     'WebSocket'],
         ] as [shape, type]}
           <div class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2.5 py-1.5">
             <code class="text-slate-600 font-mono">{shape}</code>

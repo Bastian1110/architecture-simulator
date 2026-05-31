@@ -1,8 +1,8 @@
 <script lang="ts">
   import { simStatus, simSpeed, simTick, latestMetrics, startSim, pauseSim, resetSim } from '../stores/simStore'
   import { resetGraphMetrics } from '../stores/graphStore'
-  import { mermaidModalOpen } from '../stores/uiStore'
-  import { FileCode2 } from 'lucide-svelte'
+  import { mermaidModalOpen, mermaidExportOpen } from '../stores/uiStore'
+  import { FileCode2, Share2 } from 'lucide-svelte'
 
   const speeds = [0.5, 1, 2, 5, 10]
 
@@ -85,14 +85,21 @@
     </div>
   {/if}
 
-  <!-- Import - pushed to right -->
-  <div class="ml-auto">
+  <!-- Import / Export - pushed to right -->
+  <div class="ml-auto flex items-center gap-1">
     <button
       class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
       on:click={() => mermaidModalOpen.set(true)}
     >
       <FileCode2 size={13} />
-      Import diagram
+      Import
+    </button>
+    <button
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+      on:click={() => mermaidExportOpen.set(true)}
+    >
+      <Share2 size={13} />
+      Export
     </button>
   </div>
 </header>

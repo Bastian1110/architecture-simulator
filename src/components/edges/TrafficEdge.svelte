@@ -14,17 +14,34 @@
   export let targetPosition: any
   export let data: TrafficEdgeData | undefined = undefined
 
-  $: [edgePath] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
+  $: [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
 
+  $: protocol = data?.protocol ?? 'http'
+  $: required = data?.required ?? false
   $: intensity = data?.intensity ?? 0
   $: active = data?.active ?? false
-  $: strokeWidth = 1.5 + intensity * 3.5
-  $: stroke = intensityToColor(intensity)
+  $: strokeWidth = 1.5 + intensity * 3
+
+  $: stroke = required && !active
+    ? '#a5b4fc'  // indigo tint for required-but-idle
+    : intensityToColor(intensity)
+
   $: dashSpeed = (1.2 - intensity * 0.8).toFixed(2)
-  $: dashArray = active ? '8 4' : 'none'
+
+  // Required edges always show dashes; active edges animate
+  $: dashArray = required && !active ? '4 4' : active ? '8 4' : 'none'
+
+  $: showLabel = protocol !== 'http' || required
+
+  const protocolLabel: Record<string, string> = {
+    websocket: 'WS',
+    grpc: 'gRPC',
+    tcp: 'TCP',
+    http: '',
+  }
 
   function intensityToColor(v: number): string {
-    if (v < 0.001) return '#374151'
+    if (v < 0.001) return '#94a3b8'
     if (v < 0.4) {
       const t = v / 0.4
       return lerpColor('#10b981', '#f59e0b', t)
@@ -65,4 +82,20 @@
       <mpath href="#{id}" />
     </animateMotion>
   </circle>
+{/if}
+
+{#if showLabel}
+  <g transform="translate({labelX},{labelY})">
+    <rect
+      x={-18} y={-8} width={36} height={16} rx={3}
+      fill="white" stroke="#e2e8f0" stroke-width="1"
+    />
+    <text
+      text-anchor="middle" dominant-baseline="middle"
+      font-size="8" font-family="monospace"
+      fill={required && !active ? '#818cf8' : '#64748b'}
+    >
+      {required && protocol === 'http' ? 'req' : (protocolLabel[protocol] || protocol)}{required && protocol !== 'http' ? '·req' : ''}
+    </text>
+  </g>
 {/if}

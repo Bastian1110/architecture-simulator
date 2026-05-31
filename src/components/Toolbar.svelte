@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Monitor, Smartphone, Globe, Scale, Zap, Server, Database } from 'lucide-svelte'
+  import { Monitor, Smartphone, Globe, Scale, Zap, Server, Database, HardDrive } from 'lucide-svelte'
   import type { NodeKind } from '../types'
 
   const items: Array<{ kind: NodeKind; component: any; label: string; subtype?: string }> = [
@@ -10,6 +10,7 @@
     { kind: 'cache',        component: Zap,        label: 'Cache'         },
     { kind: 'server',       component: Server,     label: 'Server'        },
     { kind: 'database',     component: Database,   label: 'Database'      },
+    { kind: 'storage',      component: HardDrive,  label: 'Storage'       },
   ]
 
   function onDragStart(e: DragEvent, kind: NodeKind, subtype?: string) {

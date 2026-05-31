@@ -15,9 +15,10 @@
   import DatabaseNode from './nodes/DatabaseNode.svelte'
   import CacheNode from './nodes/CacheNode.svelte'
   import CdnNode from './nodes/CdnNode.svelte'
+  import StorageNode from './nodes/StorageNode.svelte'
   import TrafficEdge from './edges/TrafficEdge.svelte'
 
-  import { nodes, edges, addNode, onConnect, selectedNodeId, updateNodeData } from '../stores/graphStore'
+  import { nodes, edges, addNode, onConnect, selectedNodeId, selectedEdgeId, updateNodeData } from '../stores/graphStore'
   import { Network } from 'lucide-svelte'
   import type { NodeKind } from '../types'
 
@@ -28,6 +29,7 @@
     database: DatabaseNode,
     cache: CacheNode,
     cdn: CdnNode,
+    storage: StorageNode,
   }
 
   const edgeTypes: EdgeTypes = {
@@ -69,11 +71,17 @@
 
   function handleNodeClick(e: CustomEvent) {
     const id = e.detail?.node?.id
-    if (id) selectedNodeId.set(id)
+    if (id) { selectedNodeId.set(id); selectedEdgeId.set(null) }
+  }
+
+  function handleEdgeClick(e: CustomEvent) {
+    const id = e.detail?.edge?.id
+    if (id) { selectedEdgeId.set(id); selectedNodeId.set(null) }
   }
 
   function handlePaneClick() {
     selectedNodeId.set(null)
+    selectedEdgeId.set(null)
   }
 
   const nodeColorMap: Record<string, string> = {
@@ -83,6 +91,7 @@
     database: '#f59e0b',
     cache: '#06b6d4',
     cdn: '#f97316',
+    storage: '#0ea5e9',
   }
 
   function miniMapColor(n: { type?: string }): string {
@@ -104,6 +113,7 @@
     fitView
     on:connect={handleConnect}
     on:nodeclick={handleNodeClick}
+    on:edgeclick={handleEdgeClick}
     on:paneclick={handlePaneClick}
     deleteKey="Delete"
     defaultEdgeOptions={{ type: 'traffic', data: { currentRPS: 0, intensity: 0, active: false } }}

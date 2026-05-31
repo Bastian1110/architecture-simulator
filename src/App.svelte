@@ -12,7 +12,8 @@
   import WelcomeModal from './components/WelcomeModal.svelte'
   import { mermaidModalOpen, mermaidExportOpen } from './stores/uiStore'
 
-  import { nodes, edges, updateEdgeTraffic } from './stores/graphStore'
+  import { nodes, edges, updateEdgeTraffic, addNode, updateNodeData } from './stores/graphStore'
+  import type { NodeKind } from './types'
   import {
     simStatus,
     simSpeed,
@@ -66,7 +67,36 @@
   }
 
   onDestroy(stopLoop)
+
+  const shortcuts: Record<string, { kind: NodeKind; subtype?: string }> = {
+    b: { kind: 'client' },
+    m: { kind: 'client', subtype: 'mobile' },
+    s: { kind: 'server' },
+    l: { kind: 'loadBalancer' },
+    d: { kind: 'database' },
+    c: { kind: 'cache' },
+    n: { kind: 'cdn' },
+    o: { kind: 'storage' },
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    const tag = (e.target as HTMLElement).tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+    if ((e.target as HTMLElement).isContentEditable) return
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+
+    const sc = shortcuts[e.key.toLowerCase()]
+    if (!sc) return
+
+    e.preventDefault()
+    // Place near viewport center with slight jitter so stacked nodes are offset
+    const pos = { x: 220 + Math.random() * 160, y: 120 + Math.random() * 120 }
+    const id = addNode(sc.kind, pos)
+    if (sc.subtype) updateNodeData(id, { subtype: sc.subtype as any })
+  }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 {#if showWelcome}
   <WelcomeModal on:dismiss={() => { showWelcome = false }} />

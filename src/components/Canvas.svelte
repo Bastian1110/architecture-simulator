@@ -19,7 +19,7 @@
   import TrafficEdge from './edges/TrafficEdge.svelte'
 
   import { nodes, edges, addNode, onConnect, selectedNodeId, selectedEdgeId, updateNodeData } from '../stores/graphStore'
-  import { Network } from 'lucide-svelte'
+  import { Map as MapIcon, Network } from 'lucide-svelte'
   import type { NodeKind } from '../types'
 
   const nodeTypes: NodeTypes = {
@@ -37,6 +37,7 @@
   }
 
   let flowEl: HTMLDivElement
+  let showMinimap = true
 
   function getFlowPosition(screenX: number, screenY: number): { x: number; y: number } {
     if (!flowEl) return { x: screenX, y: screenY }
@@ -99,6 +100,7 @@
   }
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   bind:this={flowEl}
   class="flex-1 relative"
@@ -111,6 +113,10 @@
     {nodeTypes}
     {edgeTypes}
     fitView
+    panOnScroll={true}
+    panOnScrollMode="free"
+    zoomOnScroll={false}
+    zoomOnPinch={true}
     on:connect={handleConnect}
     on:nodeclick={handleNodeClick}
     on:edgeclick={handleEdgeClick}
@@ -118,18 +124,27 @@
     deleteKey="Delete"
     defaultEdgeOptions={{ type: 'traffic', data: { currentRPS: 0, intensity: 0, active: false } }}
   >
-    <Background
-      variant="dots"
-      gap={24}
-      size={1}
-      color="#d1d5db"
-    />
+    <Background variant="dots" gap={24} size={1} color="#d1d5db" />
     <Controls position="bottom-right" />
-    <MiniMap
-      position="bottom-left"
-      nodeColor={miniMapColor}
-    />
+    {#if showMinimap}
+      <MiniMap position="bottom-left" nodeColor={miniMapColor} />
+    {/if}
   </SvelteFlow>
+
+  <!-- Minimap toggle -->
+  <button
+    class="absolute bottom-3 left-3 z-10 flex items-center justify-center w-7 h-7 rounded-md
+           border transition-colors"
+    class:bg-white={!showMinimap}
+    class:bg-slate-100={showMinimap}
+    class:border-slate-200={true}
+    class:text-slate-400={!showMinimap}
+    style={showMinimap ? 'color: #204878;' : ''}
+    title={showMinimap ? 'Hide minimap' : 'Show minimap'}
+    on:click={() => { showMinimap = !showMinimap }}
+  >
+    <MapIcon size={13} />
+  </button>
 
   <!-- Empty state hint -->
   {#if $nodes.length === 0}

@@ -36,7 +36,7 @@
         on:mouseleave={(e) => (e.currentTarget.style.backgroundColor = '#204878')}
         on:click={isIdle || isPaused ? startSim : undefined}
       >
-        {isPaused ? 'Resume' : 'Start'}
+        {isPaused ? 'Resume Simulation' : 'Start Simulation'}
       </button>
     {:else}
       <button

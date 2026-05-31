@@ -36,6 +36,15 @@
   const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-slate-400 transition-colors"
   const labelCls = "text-xs text-slate-500 font-medium"
 
+  // Log-scale helpers for the RPS slider (1 → 100 000)
+  function rpsToSlider(rps: number): number {
+    return Math.round(Math.log10(Math.max(1, rps)) / Math.log10(100000) * 100)
+  }
+  function sliderInputToRps(e: Event): number {
+    const v = parseFloat((e.target as HTMLInputElement).value)
+    return Math.round(Math.pow(10, (v / 100) * Math.log10(100000)))
+  }
+
   let stepCounter = 0
   function addStep() {
     if (!selectedNode || selectedNode.data.kind !== 'server') return
@@ -123,10 +132,21 @@
             </select>
           </div>
           <div class="space-y-1">
-            <label class={labelCls}>Requests / Second</label>
+            <div class="flex items-center justify-between">
+              <label class={labelCls}>Requests / Second</label>
+              {#if running}
+                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded" style="background: #e8f0fb; color: #204878;">live</span>
+              {/if}
+            </div>
             <input type="number" min="1" max="100000" step="1" class="{inputCls} font-mono"
               value={selectedNode.data.rps}
-              on:change={(e) => patch({ rps: numVal(e) })}
+              on:input={(e) => patch({ rps: numVal(e) })}
+            />
+            <input
+              type="range" min="0" max="100" step="1"
+              class="w-full accent-[#204878] cursor-pointer"
+              value={rpsToSlider(selectedNode.data.rps)}
+              on:input={(e) => patch({ rps: sliderInputToRps(e) })}
             />
           </div>
           <p class="text-[10px] text-slate-400">

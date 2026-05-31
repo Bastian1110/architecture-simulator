@@ -163,7 +163,7 @@
             <div class="flex items-center justify-between">
               <label class={labelCls}>Pipeline steps</label>
               <button
-                class="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                class="text-xs font-medium" style="color: #204878;"
                 on:click={addStep}
               >+ Add</button>
             </div>

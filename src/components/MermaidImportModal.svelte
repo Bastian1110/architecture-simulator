@@ -55,7 +55,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
       <div class="flex items-center gap-2.5">
-        <span class="text-indigo-500"><FileCode2 size={18} /></span>
+        <span style="color: #204878;"><FileCode2 size={18} /></span>
         <span class="font-semibold text-slate-800 text-sm">Import from Mermaid</span>
       </div>
       <button
@@ -136,9 +136,8 @@
         </button>
         <button
           class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors
-                 {valid
-                   ? 'bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm'
-                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
+                 {valid ? 'text-white shadow-sm' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
+          style={valid ? 'background-color: #204878;' : ''}
           disabled={!valid}
           on:click={handleImport}
         >

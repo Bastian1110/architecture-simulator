@@ -31,7 +31,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
       <div class="flex items-center gap-2.5">
-        <span class="text-indigo-500"><FileCode2 size={18} /></span>
+        <span style="color: #204878;"><FileCode2 size={18} /></span>
         <span class="font-semibold text-slate-800 text-sm">Export as Mermaid</span>
       </div>
       <button
@@ -64,8 +64,10 @@
         Close
       </button>
       <button
-        class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors
-               bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-white shadow-sm"
+        style="background-color: #204878;"
+        on:mouseenter={(e) => (e.currentTarget.style.backgroundColor = '#2d5c91')}
+        on:mouseleave={(e) => (e.currentTarget.style.backgroundColor = '#204878')}
         on:click={handleCopy}
       >
         {#if copied}

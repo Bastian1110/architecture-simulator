@@ -34,8 +34,8 @@ html, body, #app {
 }
 
 .svelte-flow__handle:hover {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: #204878;
+  border-color: #204878;
 }
 
 .svelte-flow__controls {
@@ -87,8 +87,8 @@ html, body, #app {
 }
 
 .arch-node.selected {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 2px rgba(99,102,241,0.12) !important;
+  border-color: #204878 !important;
+  box-shadow: 0 0 0 2px rgba(32,72,120,0.15) !important;
 }
 
 .status-idle       { border-color: #e2e8f0; }

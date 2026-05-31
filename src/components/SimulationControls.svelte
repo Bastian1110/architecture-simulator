@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { simStatus, simSpeed, simTick, latestMetrics, startSim, pauseSim, resetSim } from '../stores/simStore'
+  import { simStatus, simSpeed, latestMetrics, startSim, pauseSim, resetSim } from '../stores/simStore'
   import { resetGraphMetrics } from '../stores/graphStore'
   import { mermaidModalOpen, mermaidExportOpen } from '../stores/uiStore'
   import { FileCode2, Share2 } from 'lucide-svelte'
@@ -20,9 +20,9 @@
   }
 </script>
 
-<header class="flex items-center gap-3 px-4 py-2 bg-white border-b border-slate-200 shrink-0">
-  <!-- Brand -->
-  <span class="text-xs font-medium text-slate-400 select-none tracking-tight">ArchiSim</span>
+<header class="flex items-center gap-3 px-3 py-2 bg-white border-b border-slate-200 shrink-0">
+  <!-- Brand icon -->
+  <img src="/icon.png" alt="Architecture" class="h-7 w-7 select-none shrink-0" />
 
   <div class="w-px h-4 bg-slate-200 mx-0.5"></div>
 
@@ -30,7 +30,10 @@
   <div class="flex items-center gap-1.5">
     {#if !isRunning}
       <button
-        class="px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-700 text-white text-xs font-medium transition-colors"
+        class="px-3 py-1.5 rounded-md text-white text-xs font-medium transition-colors"
+        style="background-color: #204878;"
+        on:mouseenter={(e) => (e.currentTarget.style.backgroundColor = '#2d5c91')}
+        on:mouseleave={(e) => (e.currentTarget.style.backgroundColor = '#204878')}
         on:click={isIdle || isPaused ? startSim : undefined}
       >
         {isPaused ? 'Resume' : 'Start'}
@@ -58,7 +61,7 @@
   <div class="flex items-center gap-1.5">
     <span class="text-xs text-slate-400">Speed</span>
     <select
-      class="text-xs bg-transparent border border-slate-200 rounded-md px-2 py-1 text-slate-600 focus:outline-none focus:border-slate-400 cursor-pointer"
+      class="text-xs bg-transparent border border-slate-200 rounded-md px-2 py-1 text-slate-600 focus:outline-none cursor-pointer"
       value={$simSpeed}
       on:change={setSpeed}
     >
@@ -68,7 +71,7 @@
     </select>
   </div>
 
-  <!-- Live metrics (only when simulation has started) -->
+  <!-- Live metrics -->
   {#if !isIdle}
     <div class="flex items-center gap-4 ml-2">
       <span class="text-xs text-slate-500">
@@ -85,7 +88,7 @@
     </div>
   {/if}
 
-  <!-- Import / Export - pushed to right -->
+  <!-- Import / Export -->
   <div class="ml-auto flex items-center gap-1">
     <button
       class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"

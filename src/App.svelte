@@ -9,6 +9,7 @@
   import MetricsPanel from './components/MetricsPanel.svelte'
   import MermaidImportModal from './components/MermaidImportModal.svelte'
   import MermaidExportModal from './components/MermaidExportModal.svelte'
+  import WelcomeModal from './components/WelcomeModal.svelte'
   import { mermaidModalOpen, mermaidExportOpen } from './stores/uiStore'
 
   import { nodes, edges, updateEdgeTraffic } from './stores/graphStore'
@@ -20,6 +21,8 @@
     applyTickResult,
   } from './stores/simStore'
   import { runTick } from './simulation/engine'
+
+  let showWelcome = !localStorage.getItem('architecture-welcomed')
 
   let intervalId: ReturnType<typeof setInterval> | null = null
 
@@ -52,10 +55,9 @@
     }
   }
 
-  // React to status + speed changes
   $: {
     const status = $simStatus
-    const _speed = $simSpeed  // track speed changes too
+    const _speed = $simSpeed
     if (status === 'running') {
       startLoop()
     } else {
@@ -66,6 +68,9 @@
   onDestroy(stopLoop)
 </script>
 
+{#if showWelcome}
+  <WelcomeModal on:dismiss={() => { showWelcome = false }} />
+{/if}
 {#if $mermaidModalOpen}
   <MermaidImportModal />
 {/if}

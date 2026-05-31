@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "@xyflow/svelte/dist/style.css";
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* SvelteFlow light theme */
+.svelte-flow {
+  background: #f1f5f9;
+}
+
+.svelte-flow__background {
+  background: #f1f5f9;
+}
+
+.svelte-flow__edge-path {
+  stroke: #cbd5e1;
+}
+
+.svelte-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #94a3b8;
+  background: #fff;
+}
+
+.svelte-flow__handle:hover {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.svelte-flow__controls {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.svelte-flow__controls button {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.svelte-flow__controls button:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.svelte-flow__minimap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* Traffic edge animation */
+@keyframes flowDash {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+.traffic-edge-active {
+  animation: flowDash 0.8s linear infinite;
+}
+
+/* Node card */
+.arch-node {
+  min-width: 148px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: default;
+  user-select: none;
+}
+
+.arch-node.selected {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15), 0 1px 3px rgba(0,0,0,0.08) !important;
+}
+
+.status-idle       { border-color: #e2e8f0; }
+.status-active     { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.15), 0 1px 3px rgba(0,0,0,0.06); }
+.status-stressed   { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.15), 0 1px 3px rgba(0,0,0,0.06); }
+.status-overloaded { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.2),   0 1px 3px rgba(0,0,0,0.06); }
+
+.status-dot-idle       { background: #94a3b8; }
+.status-dot-active     { background: #10b981; }
+.status-dot-stressed   { background: #f59e0b; }
+.status-dot-overloaded { background: #ef4444; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }

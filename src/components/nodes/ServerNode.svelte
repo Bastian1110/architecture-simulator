@@ -17,38 +17,25 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="arch-node status-{status} px-3 py-2.5 {selected ? 'selected' : ''}" on:click={handleClick}>
+<div class="arch-node status-{status} {selected ? 'selected' : ''}" on:click={handleClick}>
   <Handle type="target" position={Position.Left} />
   <Handle type="source" position={Position.Right} />
 
-  <div class="flex items-center gap-2 mb-1.5">
-    <span class="w-2 h-2 rounded-full status-dot-{status} shrink-0"></span>
-    <span class="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Server / VM</span>
-  </div>
-
   <div class="flex items-center gap-2 mb-2">
-    <span class="text-slate-500"><Server size={16} /></span>
-    <span class="text-sm font-semibold text-slate-800 truncate">{data.label}</span>
+    <span style="color: #10b981"><Server size={14} /></span>
+    <span class="text-sm font-medium text-slate-800 flex-1 truncate">{data.label}</span>
+    <span class="w-1.5 h-1.5 rounded-full status-dot-{status} shrink-0"></span>
   </div>
 
-  <div class="text-[11px] text-slate-500 space-y-0.5">
+  <div class="text-[11px] text-slate-400 space-y-0.5">
     <div class="flex justify-between gap-3">
-      <span>Cores</span>
-      <span class="text-slate-700 font-mono">{data.cpuCores}</span>
+      <span>{data.cpuCores} cores · {data.processingTimeMs}ms</span>
+      {#if running && metrics}
+        <span class="{metrics.status === 'overloaded' ? 'text-red-400' : metrics.status === 'stressed' ? 'text-amber-500' : 'text-slate-600'} font-mono">{metrics.rps}/s</span>
+      {/if}
     </div>
-    <div class="flex justify-between gap-3">
-      <span>Latency</span>
-      <span class="text-slate-700 font-mono">{data.processingTimeMs}ms</span>
-    </div>
-    {#if running && metrics}
-      <div class="pt-1 border-t border-slate-200 flex justify-between gap-3 text-emerald-600">
-        <span>Live RPS</span>
-        <span class="font-mono">{metrics.rps}/s</span>
-      </div>
-      <div class="flex justify-between gap-3 {metrics.status === 'overloaded' ? 'text-red-400' : metrics.status === 'stressed' ? 'text-amber-400' : 'text-slate-500'}">
-        <span>Latency</span>
-        <span class="font-mono">{metrics.avgLatencyMs}ms</span>
-      </div>
+    {#if running && metrics && metrics.avgLatencyMs > 0}
+      <div class="text-slate-400">{metrics.avgLatencyMs}ms avg</div>
     {/if}
   </div>
 </div>

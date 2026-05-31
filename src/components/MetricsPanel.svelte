@@ -24,13 +24,13 @@
 </script>
 
 {#if running}
-  <div class="h-[140px] border-t border-slate-200 bg-white flex shrink-0 shadow-sm">
+  <div class="h-[120px] border-t border-slate-200 bg-white flex shrink-0">
 
     <!-- RPS chart -->
     <div class="flex-1 flex flex-col px-4 py-3 border-r border-slate-100">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Requests / sec</span>
-        <span class="text-emerald-600 font-mono text-sm font-bold">{$latestMetrics.globalRPS}</span>
+        <span class="text-xs text-slate-400">Requests / sec</span>
+        <span class="text-slate-700 font-mono text-sm font-medium">{$latestMetrics.globalRPS}</span>
       </div>
       <svg viewBox="0 0 {W} {H}" class="flex-1 w-full">
         <defs>
@@ -53,8 +53,8 @@
     <!-- Latency chart -->
     <div class="flex-1 flex flex-col px-4 py-3 border-r border-slate-100">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Avg Latency</span>
-        <span class="text-indigo-600 font-mono text-sm font-bold">{$latestMetrics.avgLatencyMs}ms</span>
+        <span class="text-xs text-slate-400">Avg latency</span>
+        <span class="text-slate-700 font-mono text-sm font-medium">{$latestMetrics.avgLatencyMs}ms</span>
       </div>
       <svg viewBox="0 0 {W} {H}" class="flex-1 w-full">
         <defs>
@@ -77,8 +77,8 @@
     <!-- Error rate chart -->
     <div class="flex-1 flex flex-col px-4 py-3">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Error Rate</span>
-        <span class="{$latestMetrics.errorRate > 0.05 ? 'text-red-500 font-bold' : 'text-slate-600'} font-mono text-sm font-bold">
+        <span class="text-xs text-slate-400">Error rate</span>
+        <span class="{$latestMetrics.errorRate > 0.05 ? 'text-red-500 font-medium' : 'text-slate-700'} font-mono text-sm">
           {($latestMetrics.errorRate * 100).toFixed(1)}%
         </span>
       </div>

@@ -19,25 +19,20 @@
   }
 </script>
 
-<aside class="w-[72px] flex flex-col items-center gap-1 py-3 bg-white border-r border-slate-200 shrink-0 shadow-sm">
-  <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1 font-medium">Nodes</div>
-
+<aside class="w-[62px] flex flex-col items-center gap-0.5 py-2 bg-white border-r border-slate-200 shrink-0">
   {#each items as item}
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
-      class="flex flex-col items-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing
+      class="flex flex-col items-center gap-1 px-1 py-2 rounded-lg cursor-grab active:cursor-grabbing
              hover:bg-slate-100 transition-colors group w-full"
       draggable="true"
+      title={item.label}
       on:dragstart={(e) => onDragStart(e, item.kind, item.subtype)}
     >
-      <span class="text-slate-500 group-hover:text-slate-700 transition-colors group-hover:scale-110 transform">
-        <svelte:component this={item.component} size={18} />
+      <span class="text-slate-400 group-hover:text-slate-700 transition-colors">
+        <svelte:component this={item.component} size={16} />
       </span>
       <span class="text-[9px] text-slate-400 group-hover:text-slate-600 text-center leading-tight">{item.label}</span>
     </div>
   {/each}
-
-  <div class="mt-auto mb-1 px-2 text-center">
-    <div class="text-[8px] text-slate-300 leading-tight">Drag to canvas</div>
-  </div>
 </aside>

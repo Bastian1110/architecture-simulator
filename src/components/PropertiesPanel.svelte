@@ -29,43 +29,43 @@
     overloaded: 'text-red-500',
   }
 
-  const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors"
-  const labelCls = "text-[10px] text-slate-500 uppercase tracking-wider font-semibold"
+  const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-slate-400 transition-colors"
+  const labelCls = "text-xs text-slate-500 font-medium"
 </script>
 
 {#if selectedNode}
-  <aside class="w-72 bg-white border-l border-slate-200 flex flex-col overflow-hidden shrink-0 shadow-sm">
+  <aside class="w-64 bg-white border-l border-slate-200 flex flex-col overflow-hidden shrink-0">
     <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-      <span class="text-sm font-semibold text-slate-800">Properties</span>
+      <span class="text-xs font-medium text-slate-600">{selectedNode.data.label}</span>
       <button
-        class="text-slate-400 hover:text-slate-600 text-sm leading-none"
+        class="text-slate-300 hover:text-slate-500 text-sm leading-none transition-colors"
         on:click={() => selectedNodeId.set(null)}
       >✕</button>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-4 py-3 space-y-5">
+    <div class="flex-1 overflow-y-auto px-4 py-3 space-y-4">
 
       <!-- Live metrics -->
       {#if running && metrics}
-        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-1.5">
-          <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">Live Metrics</div>
+        <div class="rounded-lg bg-slate-50 border border-slate-100 p-3 space-y-1.5">
+          <div class="text-xs text-slate-500 font-medium mb-2">Live</div>
           <div class="flex justify-between text-xs">
-            <span class="text-slate-500">Status</span>
-            <span class="font-semibold {statusColor[metrics.status] ?? 'text-slate-500'} capitalize">
+            <span class="text-slate-400">Status</span>
+            <span class="{statusColor[metrics.status] ?? 'text-slate-500'} capitalize font-medium">
               {metrics.status}
             </span>
           </div>
           <div class="flex justify-between text-xs">
-            <span class="text-slate-500">RPS</span>
-            <span class="text-emerald-600 font-mono font-semibold">{metrics.rps}/s</span>
+            <span class="text-slate-400">Throughput</span>
+            <span class="text-slate-700 font-mono">{metrics.rps}/s</span>
           </div>
           <div class="flex justify-between text-xs">
-            <span class="text-slate-500">Avg Latency</span>
-            <span class="text-indigo-600 font-mono">{metrics.avgLatencyMs}ms</span>
+            <span class="text-slate-400">Latency</span>
+            <span class="text-slate-700 font-mono">{metrics.avgLatencyMs}ms</span>
           </div>
           <div class="flex justify-between text-xs">
-            <span class="text-slate-500">Error Rate</span>
-            <span class="{metrics.errorRate > 0.05 ? 'text-red-500 font-semibold' : 'text-slate-600'} font-mono">
+            <span class="text-slate-400">Error rate</span>
+            <span class="{metrics.errorRate > 0.05 ? 'text-red-500 font-medium' : 'text-slate-600'} font-mono">
               {(metrics.errorRate * 100).toFixed(1)}%
             </span>
           </div>

@@ -7,18 +7,18 @@ html, body, #app {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #0f172a;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* SvelteFlow light theme */
 .svelte-flow {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 .svelte-flow__background {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 .svelte-flow__edge-path {
@@ -59,8 +59,8 @@ html, body, #app {
 .svelte-flow__minimap {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border-radius: 6px;
+  box-shadow: none;
 }
 
 /* Traffic edge animation */
@@ -75,27 +75,28 @@ html, body, #app {
 
 /* Node card */
 .arch-node {
-  min-width: 148px;
-  border-radius: 12px;
-  border: 1.5px solid #e2e8f0;
+  min-width: 144px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  padding: 9px 11px;
+  transition: border-color 0.15s;
   cursor: default;
   user-select: none;
 }
 
 .arch-node.selected {
   border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.15), 0 1px 3px rgba(0,0,0,0.08) !important;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.12) !important;
 }
 
 .status-idle       { border-color: #e2e8f0; }
-.status-active     { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.15), 0 1px 3px rgba(0,0,0,0.06); }
-.status-stressed   { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.15), 0 1px 3px rgba(0,0,0,0.06); }
-.status-overloaded { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.2),   0 1px 3px rgba(0,0,0,0.06); }
+.status-active     { border-color: #10b981; }
+.status-stressed   { border-color: #f59e0b; }
+.status-overloaded { border-color: #ef4444; }
 
-.status-dot-idle       { background: #94a3b8; }
+.status-dot-idle       { background: #cbd5e1; }
 .status-dot-active     { background: #10b981; }
 .status-dot-stressed   { background: #f59e0b; }
 .status-dot-overloaded { background: #ef4444; }

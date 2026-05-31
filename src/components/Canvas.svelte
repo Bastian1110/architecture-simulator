@@ -110,9 +110,9 @@
   >
     <Background
       variant="dots"
-      gap={20}
+      gap={24}
       size={1}
-      color="#1f2937"
+      color="#d1d5db"
     />
     <Controls position="bottom-right" />
     <MiniMap
@@ -124,14 +124,9 @@
   <!-- Empty state hint -->
   {#if $nodes.length === 0}
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div class="text-center space-y-3">
-        <div class="text-slate-300"><Network size={40} /></div>
-        <div class="text-slate-400 text-sm">
-          Drag nodes from the sidebar to build your architecture
-        </div>
-        <div class="text-slate-300 text-xs">
-          Connect them by dragging between the handle dots
-        </div>
+      <div class="text-center">
+        <div class="text-slate-300 mb-2"><Network size={32} /></div>
+        <p class="text-sm text-slate-400">Drag components from the sidebar</p>
       </div>
     </div>
   {/if}

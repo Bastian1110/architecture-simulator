@@ -16,6 +16,7 @@
   import CacheNode from './nodes/CacheNode.svelte'
   import CdnNode from './nodes/CdnNode.svelte'
   import StorageNode from './nodes/StorageNode.svelte'
+  import OrchestratorNode from './nodes/OrchestratorNode.svelte'
   import TrafficEdge from './edges/TrafficEdge.svelte'
 
   import { nodes, edges, addNode, onConnect, selectedNodeId, selectedEdgeId, updateNodeData } from '../stores/graphStore'
@@ -30,6 +31,7 @@
     cache: CacheNode,
     cdn: CdnNode,
     storage: StorageNode,
+    orchestrator: OrchestratorNode,
   }
 
   const edgeTypes: EdgeTypes = {
@@ -93,6 +95,7 @@
     cache: '#06b6d4',
     cdn: '#f97316',
     storage: '#0ea5e9',
+    orchestrator: '#7c3aed',
   }
 
   function miniMapColor(n: { type?: string }): string {

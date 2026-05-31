@@ -1,9 +1,10 @@
 import type { Node, Edge } from '@xyflow/svelte'
 
-export type NodeKind = 'client' | 'loadBalancer' | 'server' | 'database' | 'cache' | 'cdn' | 'storage'
+export type NodeKind = 'client' | 'loadBalancer' | 'server' | 'database' | 'cache' | 'cdn' | 'storage' | 'orchestrator'
 export type NodeStatus = 'idle' | 'active' | 'stressed' | 'overloaded'
 export type LBAlgorithm = 'roundRobin' | 'leastConnections' | 'random'
 export type Protocol = 'http' | 'websocket' | 'grpc' | 'tcp'
+export type OrchType = 'kubernetes' | 'ecs' | 'swarm' | 'nomad'
 
 export interface MiddlewareStep {
   id: string
@@ -66,6 +67,18 @@ export interface StorageParams {
   errorRate: number
 }
 
+export interface OrchestratorParams {
+  kind: 'orchestrator'
+  label: string
+  orchType: OrchType
+  minInstances: number
+  maxInstances: number
+  instanceCpuCores: number
+  processingTimeMs: number
+  containerPerSession: number
+  errorRate: number
+}
+
 export type NodeParams =
   | ClientParams
   | LoadBalancerParams
@@ -74,6 +87,7 @@ export type NodeParams =
   | CacheParams
   | CdnParams
   | StorageParams
+  | OrchestratorParams
 
 export type AppNode = Node<NodeParams, NodeKind>
 
@@ -149,5 +163,16 @@ export const DEFAULT_NODE_DATA: Record<NodeKind, NodeParams> = {
     readLatencyMs: 50,
     writeLatencyMs: 80,
     errorRate: 0.001,
+  },
+  orchestrator: {
+    kind: 'orchestrator',
+    label: 'Kubernetes',
+    orchType: 'kubernetes',
+    minInstances: 2,
+    maxInstances: 10,
+    instanceCpuCores: 2,
+    processingTimeMs: 50,
+    containerPerSession: 0.1,
+    errorRate: 0.01,
   },
 }

@@ -14,6 +14,7 @@ function nodeToShape(kind: NodeKind, label: string): string {
     case 'storage':      return `[[${l}]]`
     case 'cdn':          return `(${l})`
     case 'server':       return `[${l}]`
+    case 'orchestrator': return `{{${l}}}`
   }
 }
 

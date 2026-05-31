@@ -330,6 +330,79 @@
             />
           </div>
         </div>
+
+      {:else if selectedNode.data.kind === 'orchestrator'}
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <label class={labelCls}>Type</label>
+            <select class={inputCls} value={selectedNode.data.orchType} on:change={(e) => patch({ orchType: selVal(e) })}>
+              <option value="kubernetes">Kubernetes</option>
+              <option value="ecs">AWS ECS / Fargate</option>
+              <option value="swarm">Docker Swarm</option>
+              <option value="nomad">HashiCorp Nomad</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1">
+              <label class={labelCls}>Min pods</label>
+              <input type="number" min="0" max="10000" step="1" class="{inputCls} font-mono"
+                value={selectedNode.data.minInstances}
+                on:change={(e) => patch({ minInstances: numVal(e) })}
+              />
+            </div>
+            <div class="space-y-1">
+              <label class={labelCls}>Max pods</label>
+              <input type="number" min="1" max="10000" step="1" class="{inputCls} font-mono"
+                value={selectedNode.data.maxInstances}
+                on:change={(e) => patch({ maxInstances: numVal(e) })}
+              />
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label class={labelCls}>CPU cores / pod</label>
+            <input type="number" min="1" max="256" step="1" class="{inputCls} font-mono"
+              value={selectedNode.data.instanceCpuCores}
+              on:change={(e) => patch({ instanceCpuCores: numVal(e) })}
+            />
+          </div>
+          <div class="space-y-1">
+            <label class={labelCls}>Processing Time (ms / pod)</label>
+            <input type="number" min="1" max="60000" step="1" class="{inputCls} font-mono"
+              value={selectedNode.data.processingTimeMs}
+              on:change={(e) => patch({ processingTimeMs: numVal(e) })}
+            />
+          </div>
+          <div class="space-y-1">
+            <label class={labelCls}>Pods per concurrent user</label>
+            <input type="number" min="0.001" max="100" step="0.001" class="{inputCls} font-mono"
+              value={selectedNode.data.containerPerSession}
+              on:change={(e) => patch({ containerPerSession: numVal(e) })}
+            />
+            {#if running && metrics}
+              {@const concurrentUsers = Math.round(metrics.rps / 10)}
+              {@const neededPods = Math.ceil(concurrentUsers * selectedNode.data.containerPerSession)}
+              <p class="text-[10px] text-slate-400">
+                ~{concurrentUsers.toLocaleString()} users → needs ~{neededPods} pods
+                {neededPods > selectedNode.data.maxInstances ? '⚠ exceeds max' : ''}
+              </p>
+            {:else}
+              <p class="text-[10px] text-slate-400">pods per concurrent session (e.g. 0.1 = 1 pod per 10 users)</p>
+            {/if}
+          </div>
+          <div class="space-y-1">
+            <label class={labelCls}>Error Rate (0–1)</label>
+            <input type="number" min="0" max="1" step="0.01" class="{inputCls} font-mono"
+              value={selectedNode.data.errorRate}
+              on:change={(e) => patch({ errorRate: numVal(e) })}
+            />
+          </div>
+          {#if running && metrics}
+            <p class="text-[10px] text-slate-400">
+              Capacity: {selectedNode.data.maxInstances * selectedNode.data.instanceCpuCores} total cores
+              · max ~{Math.floor(selectedNode.data.maxInstances * selectedNode.data.instanceCpuCores * 1000 / selectedNode.data.processingTimeMs)}/s
+            </p>
+          {/if}
+        </div>
       {/if}
 
       <!-- Delete -->

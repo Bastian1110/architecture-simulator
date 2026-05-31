@@ -77,6 +77,7 @@
     c: { kind: 'cache' },
     n: { kind: 'cdn' },
     o: { kind: 'storage' },
+    k: { kind: 'orchestrator' },
   }
 
   function handleKeydown(e: KeyboardEvent) {

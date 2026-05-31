@@ -64,7 +64,39 @@ function nodeCapacity(node: AppNode, tickMs: number): number {
   if (d.kind === 'database') {
     return Math.max(1, Math.floor(d.maxConnections * tickMs / d.queryTimeMs))
   }
+  if (d.kind === 'storage') {
+    const avgMs = (d.readLatencyMs + d.writeLatencyMs) / 2
+    const concurrency = d.storageType === 'minio' ? 20 : 200
+    return Math.max(1, Math.floor(concurrency * tickMs / avgMs))
+  }
+  if (d.kind === 'orchestrator') {
+    const totalCores = d.maxInstances * d.instanceCpuCores
+    return Math.max(1, Math.floor(totalCores * tickMs / d.processingTimeMs))
+  }
   return Infinity
+}
+
+// M/M/c queueing model approximation.
+// util = handled/capacity = per-worker utilisation (ρ in M/M/c notation).
+// parallelism = number of parallel workers (cores, connections, …).
+//
+// Stable (ρ < 1):  W ≈ T · (1 + ρ / (c · (1 – ρ)))
+// Overloaded (ρ ≥ 1): queue grows without bound → severe latency + errors.
+function computeQueueingEffect(
+  util: number,
+  parallelism: number,
+): { latencyMultiplier: number; extraErrorRate: number } {
+  if (util <= 0.01 || parallelism <= 0) return { latencyMultiplier: 1, extraErrorRate: 0 }
+
+  if (util >= 1) {
+    return {
+      latencyMultiplier: 1 + util * 5,
+      extraErrorRate: Math.min(0.95, (util - 1) * 0.8),
+    }
+  }
+
+  const latencyMultiplier = 1 + util / (parallelism * (1 - util))
+  return { latencyMultiplier: Math.min(latencyMultiplier, 50), extraErrorRate: 0 }
 }
 
 function routeRequest(
@@ -144,6 +176,22 @@ function routeRequest(
       // Average of read/write latency (simplified model)
       latency += Math.round((d.readLatencyMs + d.writeLatencyMs) / 2)
       errored = Math.random() < d.errorRate
+      const out = getMainOutgoing(nodeId, edges)
+      if (out.length > 0) nextEdge = out[Math.floor(Math.random() * out.length)]
+      break
+    }
+    case 'orchestrator': {
+      latency += d.processingTimeMs
+      errored = Math.random() < d.errorRate
+
+      // Required side calls (e.g. per-container DB calls)
+      for (const reqEdge of getRequiredOutgoing(nodeId, edges)) {
+        edgeLoads.set(reqEdge.id, (edgeLoads.get(reqEdge.id) ?? 0) + 1)
+        const side = routeRequest(reqEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1)
+        latency += side.latency
+        if (side.errored) errored = true
+      }
+
       const out = getMainOutgoing(nodeId, edges)
       if (out.length > 0) nextEdge = out[Math.floor(Math.random() * out.length)]
       break
@@ -234,13 +282,41 @@ export function runTick(
   }
 
   const tickSeconds = tickMs / 1000
+
+  // Apply M/M/c queueing corrections using final (scaled) load counts.
+  // Extra latency is added to the global total weighted by requests through each node.
+  let adjustedTotalLatency = totalLatency
   const nodeMetrics = new Map<string, NodeMetrics>()
+
   for (const node of nodes) {
     const load = nodeLoads.get(node.id)!
+    const d = node.data
+
+    let avgLatency = load.handled > 0 ? load.latency / load.handled : 0
+    let errorRate = load.handled > 0 ? load.errors / load.handled : 0
+
+    if (load.capacity !== Infinity && load.handled > 0) {
+      const util = load.handled / load.capacity
+      let parallelism = 0
+
+      if (d.kind === 'server') parallelism = d.cpuCores
+      else if (d.kind === 'database') parallelism = d.maxConnections
+      else if (d.kind === 'storage') parallelism = d.storageType === 'minio' ? 20 : 200
+      else if (d.kind === 'orchestrator') parallelism = d.maxInstances * d.instanceCpuCores
+
+      if (parallelism > 0) {
+        const { latencyMultiplier, extraErrorRate } = computeQueueingEffect(util, parallelism)
+        // Accumulate the extra queueing delay into the global latency total.
+        adjustedTotalLatency += avgLatency * (latencyMultiplier - 1) * load.handled
+        avgLatency *= latencyMultiplier
+        errorRate = Math.min(1, errorRate + extraErrorRate)
+      }
+    }
+
     nodeMetrics.set(node.id, {
       rps: Math.round(load.handled / tickSeconds),
-      avgLatencyMs: load.handled > 0 ? Math.round(load.latency / load.handled) : 0,
-      errorRate: load.handled > 0 ? load.errors / load.handled : 0,
+      avgLatencyMs: Math.round(avgLatency),
+      errorRate,
       status: computeStatus(load.handled, load.capacity),
     })
   }
@@ -251,7 +327,7 @@ export function runTick(
   }
 
   const totalRPS = Math.round(totalCompleted / tickSeconds)
-  const avgLatencyMs = totalCompleted > 0 ? Math.round(totalLatency / totalCompleted) : 0
+  const avgLatencyMs = totalCompleted > 0 ? Math.round(adjustedTotalLatency / totalCompleted) : 0
   const errorRate = totalCompleted > 0 ? totalErrors / totalCompleted : 0
 
   return { nodeMetrics, edgeTraffic, totalRPS, avgLatencyMs, errorRate, newAccumulators, newCounters }

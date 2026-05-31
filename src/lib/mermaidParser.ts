@@ -1,7 +1,7 @@
 import type { AppNode, AppEdge, NodeKind, NodeParams, Protocol } from '../types'
 import { DEFAULT_NODE_DATA } from '../types'
 
-type Shape = 'rect' | 'round' | 'cylinder' | 'stadium' | 'circle' | 'diamond' | 'subroutine'
+type Shape = 'rect' | 'round' | 'cylinder' | 'stadium' | 'circle' | 'diamond' | 'subroutine' | 'hexagon'
 
 interface ParsedNode {
   id: string
@@ -30,6 +30,10 @@ function parseNodeToken(token: string): ParsedNode | null {
   const t = token.trim()
   if (!t) return null
   let m: RegExpMatchArray | null
+
+  // {{label}} — hexagon → orchestrator
+  m = t.match(/^([\w][\w-]*)\{\{(.+?)\}\}$/)
+  if (m) return { id: m[1], label: clean(m[2]), shape: 'hexagon' }
 
   // [[label]] — subroutine → storage
   m = t.match(/^([\w][\w-]*)\[\[(.+?)\]\]$/)
@@ -75,8 +79,10 @@ function inferKind(node: ParsedNode): NodeKind {
   if (/cdn|cloudfront|edge.?server|static/.test(text)) return 'cdn'
   if (/storage|s3|gcs|blob|minio|object.?stor/.test(text)) return 'storage'
   if (/\bdb\b|database|sql|postgres|mysql|mongo|dynamo|cassandra/.test(text)) return 'database'
+  if (/kubernetes|k8s|kube|orchestrat|swarm|\becs\b|nomad|fargate/.test(text)) return 'orchestrator'
   if (/server|api|service|backend|worker|pod|node|app|auth/.test(text)) return 'server'
 
+  if (node.shape === 'hexagon') return 'orchestrator'
   if (node.shape === 'subroutine') return 'storage'
   if (node.shape === 'cylinder') return 'database'
   if (node.shape === 'diamond') return 'loadBalancer'

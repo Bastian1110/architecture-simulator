@@ -16,9 +16,12 @@ interface ParsedEdge {
   required: boolean
 }
 
+type RawParams = Record<string, string>
+
 interface ParseResult {
   nodes: ParsedNode[]
   edges: ParsedEdge[]
+  params: Map<string, RawParams>
   error?: string
 }
 
@@ -101,15 +104,27 @@ function inferProtocol(label: string): Protocol {
 }
 
 export function parseMermaid(input: string): ParseResult {
-  const lines = input
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l && !l.startsWith('%%'))
+  const rawLines = input.split('\n').map(l => l.trim()).filter(Boolean)
 
-  if (lines.length === 0) return { nodes: [], edges: [], error: 'Empty input.' }
+  // Pre-scan %% @params annotations before stripping comments
+  const params = new Map<string, RawParams>()
+  for (const raw of rawLines) {
+    const m = raw.match(/^%%\s*@params\s+(\S+)\s+(.+)$/)
+    if (!m) continue
+    const entries: RawParams = {}
+    for (const kv of m[2].trim().split(/\s+/)) {
+      const eq = kv.indexOf('=')
+      if (eq > 0) entries[kv.slice(0, eq)] = kv.slice(eq + 1)
+    }
+    params.set(m[1], entries)
+  }
+
+  const lines = rawLines.filter(l => !l.startsWith('%%'))
+
+  if (lines.length === 0) return { nodes: [], edges: [], params, error: 'Empty input.' }
 
   if (!/^(graph|flowchart)\b/i.test(lines[0])) {
-    return { nodes: [], edges: [], error: 'Diagram must start with "graph" or "flowchart".' }
+    return { nodes: [], edges: [], params, error: 'Diagram must start with "graph" or "flowchart".' }
   }
 
   const nodeMap = new Map<string, ParsedNode>()
@@ -174,10 +189,10 @@ export function parseMermaid(input: string): ParseResult {
   }
 
   if (nodeMap.size === 0) {
-    return { nodes: [], edges: [], error: 'No nodes found. Check your syntax.' }
+    return { nodes: [], edges: [], params, error: 'No nodes found. Check your syntax.' }
   }
 
-  return { nodes: Array.from(nodeMap.values()), edges }
+  return { nodes: Array.from(nodeMap.values()), edges, params }
 }
 
 function layoutNodes(
@@ -246,10 +261,34 @@ export interface LoadGraphResult {
   error?: string
 }
 
+function applyParams(data: NodeParams, raw: RawParams): NodeParams {
+  if (Object.keys(raw).length === 0) return data
+  const num = (k: string, fb: number) => raw[k] !== undefined ? parseFloat(raw[k]) : fb
+  const str = (k: string, fb: string) => raw[k] ?? fb
+  switch (data.kind) {
+    case 'client':
+      return { ...data, rps: num('rps', data.rps), subtype: str('subtype', data.subtype) as any }
+    case 'loadBalancer':
+      return { ...data, algorithm: str('algorithm', data.algorithm) as any, maxRPS: num('maxRPS', data.maxRPS) }
+    case 'server':
+      return { ...data, cpuCores: num('cpuCores', data.cpuCores), processingTimeMs: num('processingTimeMs', data.processingTimeMs), errorRate: num('errorRate', data.errorRate) }
+    case 'database':
+      return { ...data, dbType: str('dbType', data.dbType) as any, queryTimeMs: num('queryTimeMs', data.queryTimeMs), maxConnections: num('maxConnections', data.maxConnections), errorRate: num('errorRate', data.errorRate) }
+    case 'cache':
+      return { ...data, hitRate: num('hitRate', data.hitRate), lookupTimeMs: num('lookupTimeMs', data.lookupTimeMs) }
+    case 'cdn':
+      return { ...data, hitRate: num('hitRate', data.hitRate), edgeLatencyMs: num('edgeLatencyMs', data.edgeLatencyMs) }
+    case 'storage':
+      return { ...data, storageType: str('storageType', data.storageType) as any, readLatencyMs: num('readLatencyMs', data.readLatencyMs), writeLatencyMs: num('writeLatencyMs', data.writeLatencyMs), errorRate: num('errorRate', data.errorRate) }
+    case 'orchestrator':
+      return { ...data, orchType: str('orchType', data.orchType) as any, minInstances: num('minInstances', data.minInstances), maxInstances: num('maxInstances', data.maxInstances), instanceCpuCores: num('instanceCpuCores', data.instanceCpuCores), processingTimeMs: num('processingTimeMs', data.processingTimeMs), containerPerSession: num('containerPerSession', data.containerPerSession), errorRate: num('errorRate', data.errorRate) }
+  }
+}
+
 let importCounter = 0
 
 export function mermaidToGraph(input: string): LoadGraphResult {
-  const { nodes: pNodes, edges: pEdges, error } = parseMermaid(input)
+  const { nodes: pNodes, edges: pEdges, params, error } = parseMermaid(input)
   if (error || pNodes.length === 0) {
     return { nodes: [], edges: [], error: error ?? 'No nodes found.' }
   }
@@ -262,11 +301,13 @@ export function mermaidToGraph(input: string): LoadGraphResult {
     const appId = `${kind}-${++importCounter}`
     idMap.set(n.id, appId)
     const pos = positions.get(n.id) ?? { x: 100, y: 100 }
+    const base = { ...DEFAULT_NODE_DATA[kind], label: n.label } as NodeParams
+    const data = applyParams(base, params.get(n.id) ?? {})
     return {
       id: appId,
       type: kind,
       position: pos,
-      data: { ...DEFAULT_NODE_DATA[kind], label: n.label } as NodeParams,
+      data,
     }
   })
 

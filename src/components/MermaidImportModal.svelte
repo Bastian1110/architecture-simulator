@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { X, FileCode2, AlertCircle, CheckCircle2 } from 'lucide-svelte'
+  import { X, FileCode2, AlertCircle, CheckCircle2, Wand2, Check } from 'lucide-svelte'
   import { mermaidModalOpen } from '../stores/uiStore'
   import { loadGraph, resetGraphMetrics } from '../stores/graphStore'
   import { resetSim } from '../stores/simStore'
   import { mermaidToGraph, parseMermaid } from '../lib/mermaidParser'
+  import { AI_PROMPT } from '../lib/aiPrompt'
 
   const EXAMPLE = `graph LR
   browser[Browser] --> lb{Load Balancer}
@@ -18,6 +19,13 @@
   let value = EXAMPLE
   let error: string | undefined = undefined
   let nodeCount = 0
+  let promptCopied = false
+
+  async function handleCopyPrompt() {
+    await navigator.clipboard.writeText(AI_PROMPT)
+    promptCopied = true
+    setTimeout(() => { promptCopied = false }, 2000)
+  }
 
   $: {
     const result = parseMermaid(value)
@@ -72,7 +80,9 @@
       <p class="text-xs text-slate-500 leading-relaxed">
         Paste a <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono text-[11px]">graph</code> or
         <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono text-[11px]">flowchart</code> Mermaid diagram.
-        Node types are inferred from labels and shapes — or use the shape hints below.
+        Node types are inferred from labels and shapes. Add
+        <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono text-[11px]">%% @params id key=val</code>
+        comments to set node parameters (exported diagrams include these automatically).
       </p>
 
       <!-- Shape reference -->
@@ -85,6 +95,7 @@
           ['id((Label))',   'Client'],
           ['id{Label}',     'Load Balancer'],
           ['id[[Label]]',   'Storage'],
+          ['id{{Label}}',   'Orchestrator'],
           ['-.->',          'Required call'],
           ['-- ws -->',     'WebSocket'],
         ] as [shape, type]}
@@ -124,25 +135,39 @@
 
     <!-- Footer -->
     <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/60">
-      <span class="text-[11px] text-slate-400 font-mono">
-        {#if valid}Cmd+Enter to import{/if}
-      </span>
-      <div class="flex gap-2">
-        <button
-          class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-200 transition-colors font-medium"
-          on:click={() => mermaidModalOpen.set(false)}
-        >
-          Cancel
-        </button>
-        <button
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors
-                 {valid ? 'text-white shadow-sm' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
-          style={valid ? 'background-color: #204878;' : ''}
-          disabled={!valid}
-          on:click={handleImport}
-        >
-          Import
-        </button>
+      <button
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+               text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+        title="Copy a prompt you can give to Claude or ChatGPT to generate this diagram format"
+        on:click={handleCopyPrompt}
+      >
+        {#if promptCopied}
+          <Check size={13} /><span>Prompt copied!</span>
+        {:else}
+          <Wand2 size={13} /><span>Copy AI prompt</span>
+        {/if}
+      </button>
+      <div class="flex items-center gap-3">
+        <span class="text-[11px] text-slate-400 font-mono">
+          {#if valid}Cmd+Enter to import{/if}
+        </span>
+        <div class="flex gap-2">
+          <button
+            class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-200 transition-colors font-medium"
+            on:click={() => mermaidModalOpen.set(false)}
+          >
+            Cancel
+          </button>
+          <button
+            class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors
+                   {valid ? 'text-white shadow-sm' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
+            style={valid ? 'background-color: #204878;' : ''}
+            disabled={!valid}
+            on:click={handleImport}
+          >
+            Import
+          </button>
+        </div>
       </div>
     </div>
 

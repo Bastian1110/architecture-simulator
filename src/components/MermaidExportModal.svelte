@@ -45,7 +45,9 @@
     <!-- Body -->
     <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
       <p class="text-xs text-slate-500">
-        Paste this into any tool that supports Mermaid diagrams, or re-import it via "Import diagram".
+        Paste into any Mermaid tool, or re-import via "Import diagram" —
+        <code class="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">%% @params</code>
+        comments preserve all node settings on round-trip.
       </p>
       <textarea
         class="w-full h-64 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono

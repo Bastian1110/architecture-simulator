@@ -1,9 +1,9 @@
 <script lang="ts">
   import { simStatus, simSpeed, latestMetrics, runHistory, startSim, pauseSim, resetSim } from '../stores/simStore'
   import { resetGraphMetrics } from '../stores/graphStore'
-  import { mermaidModalOpen, mermaidExportOpen } from '../stores/uiStore'
+  import { mermaidModalOpen, mermaidExportOpen, designsModalOpen } from '../stores/uiStore'
   import { saveRunResults } from '../lib/exportResults'
-  import { FileCode2, Share2, Download } from 'lucide-svelte'
+  import { FileCode2, Share2, Download, BookMarked } from 'lucide-svelte'
 
   const speeds = [0.5, 1, 2, 5, 10]
 
@@ -89,7 +89,7 @@
     </div>
   {/if}
 
-  <!-- Import / Export / Save run -->
+  <!-- Import / Export / Designs / Save run -->
   <div class="ml-auto flex items-center gap-1">
     <button
       class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
@@ -104,6 +104,13 @@
     >
       <Share2 size={13} />
       Export
+    </button>
+    <button
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+      on:click={() => designsModalOpen.set(true)}
+    >
+      <BookMarked size={13} />
+      Designs
     </button>
     {#if $runHistory.length > 0}
       <button

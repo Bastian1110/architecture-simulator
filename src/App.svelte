@@ -11,7 +11,8 @@
   import MermaidExportModal from './components/MermaidExportModal.svelte'
   import WelcomeModal from './components/WelcomeModal.svelte'
   import DesignsModal from './components/DesignsModal.svelte'
-  import { mermaidModalOpen, mermaidExportOpen, designsModalOpen } from './stores/uiStore'
+  import ExamplesModal from './components/ExamplesModal.svelte'
+  import { mermaidModalOpen, mermaidExportOpen, designsModalOpen, examplesModalOpen } from './stores/uiStore'
 
   import { nodes, edges, updateEdgeTraffic, addNode, updateNodeData } from './stores/graphStore'
   import type { NodeKind } from './types'
@@ -113,6 +114,9 @@
 {/if}
 {#if $designsModalOpen}
   <DesignsModal />
+{/if}
+{#if $examplesModalOpen}
+  <ExamplesModal />
 {/if}
 
 <div class="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden">

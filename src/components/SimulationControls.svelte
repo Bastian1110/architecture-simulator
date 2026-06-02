@@ -1,9 +1,9 @@
 <script lang="ts">
   import { simStatus, simSpeed, latestMetrics, runHistory, startSim, pauseSim, resetSim } from '../stores/simStore'
   import { resetGraphMetrics } from '../stores/graphStore'
-  import { mermaidModalOpen, mermaidExportOpen, designsModalOpen } from '../stores/uiStore'
+  import { mermaidModalOpen, mermaidExportOpen, designsModalOpen, examplesModalOpen } from '../stores/uiStore'
   import { saveRunResults } from '../lib/exportResults'
-  import { FileCode2, Share2, Download, BookMarked } from 'lucide-svelte'
+  import { FileCode2, Share2, Download, BookMarked, Sparkles } from 'lucide-svelte'
 
   const speeds = [0.5, 1, 2, 5, 10]
 
@@ -111,6 +111,16 @@
     >
       <BookMarked size={13} />
       Designs
+    </button>
+    <button
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+      style="color: #204878; background: #eef3fb;"
+      on:mouseenter={(e) => (e.currentTarget.style.background = '#dde8f6')}
+      on:mouseleave={(e) => (e.currentTarget.style.background = '#eef3fb')}
+      on:click={() => examplesModalOpen.set(true)}
+    >
+      <Sparkles size={13} />
+      Examples
     </button>
     {#if $runHistory.length > 0}
       <button

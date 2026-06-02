@@ -20,8 +20,13 @@ function nodeToShape(kind: NodeKind, label: string): string {
 
 function nodeToParams(data: NodeParams): string {
   switch (data.kind) {
-    case 'client':
-      return `rps=${data.rps} subtype=${data.subtype}`
+    case 'client': {
+      let p = `rps=${data.rps} subtype=${data.subtype} trafficPattern=${data.trafficPattern ?? 'constant'}`
+      if ((data.trafficPattern ?? 'constant') === 'ramp') p += ` rampDurationTicks=${data.rampDurationTicks}`
+      if ((data.trafficPattern ?? 'constant') === 'spike') p += ` spikeFactor=${data.spikeFactor} spikeDurationTicks=${data.spikeDurationTicks} spikeIntervalTicks=${data.spikeIntervalTicks}`
+      if ((data.trafficPattern ?? 'constant') === 'sine') p += ` sineAmplitude=${data.sineAmplitude} sinePeriodTicks=${data.sinePeriodTicks}`
+      return p
+    }
     case 'loadBalancer':
       return `algorithm=${data.algorithm} maxRPS=${data.maxRPS}`
     case 'server':

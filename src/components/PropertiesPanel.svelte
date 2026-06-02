@@ -1,6 +1,6 @@
 <script lang="ts">
   import { nodes, edges, selectedNodeId, selectedEdgeId, updateNodeData, updateEdgeData, deleteNode } from '../stores/graphStore'
-  import { nodeMetrics, simStatus } from '../stores/simStore'
+  import { nodeMetrics, simStatus, failedNodes, toggleNodeFailed } from '../stores/simStore'
   import type { NodeParams, MiddlewareStep } from '../types'
 
   $: selectedNode = $selectedNodeId ? $nodes.find(n => n.id === $selectedNodeId) : null
@@ -152,6 +152,73 @@
           <p class="text-[10px] text-slate-400">
             ~{Math.round(selectedNode.data.rps / 10).toLocaleString()} concurrent users (estimated)
           </p>
+          <!-- Traffic pattern -->
+          <div class="space-y-1 pt-1 border-t border-slate-100">
+            <label class={labelCls}>Traffic Pattern</label>
+            <select class={inputCls} value={selectedNode.data.trafficPattern ?? 'constant'} on:change={(e) => patch({ trafficPattern: selVal(e) })}>
+              <option value="constant">Constant</option>
+              <option value="ramp">Ramp up</option>
+              <option value="spike">Spike</option>
+              <option value="sine">Sine wave</option>
+            </select>
+          </div>
+          {#if (selectedNode.data.trafficPattern ?? 'constant') === 'ramp'}
+            <div class="space-y-1">
+              <label class={labelCls}>Ramp duration (ticks)</label>
+              <input type="number" min="10" max="10000" step="10" class="{inputCls} font-mono"
+                value={selectedNode.data.rampDurationTicks ?? 300}
+                on:change={(e) => patch({ rampDurationTicks: numVal(e) })}
+              />
+              <p class="text-[10px] text-slate-400">Ticks to reach full RPS from zero</p>
+            </div>
+          {:else if (selectedNode.data.trafficPattern ?? 'constant') === 'spike'}
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1">
+                <label class={labelCls}>Spike factor</label>
+                <input type="number" min="1.1" max="100" step="0.5" class="{inputCls} font-mono"
+                  value={selectedNode.data.spikeFactor ?? 5}
+                  on:change={(e) => patch({ spikeFactor: numVal(e) })}
+                />
+              </div>
+              <div class="space-y-1">
+                <label class={labelCls}>Duration (ticks)</label>
+                <input type="number" min="1" max="1000" step="5" class="{inputCls} font-mono"
+                  value={selectedNode.data.spikeDurationTicks ?? 30}
+                  on:change={(e) => patch({ spikeDurationTicks: numVal(e) })}
+                />
+              </div>
+            </div>
+            <div class="space-y-1">
+              <label class={labelCls}>Interval (ticks)</label>
+              <input type="number" min="10" max="10000" step="10" class="{inputCls} font-mono"
+                value={selectedNode.data.spikeIntervalTicks ?? 200}
+                on:change={(e) => patch({ spikeIntervalTicks: numVal(e) })}
+              />
+              <p class="text-[10px] text-slate-400">
+                Bursts to {Math.round(selectedNode.data.rps * (selectedNode.data.spikeFactor ?? 5)).toLocaleString()}/s for {selectedNode.data.spikeDurationTicks ?? 30} ticks every {selectedNode.data.spikeIntervalTicks ?? 200}
+              </p>
+            </div>
+          {:else if (selectedNode.data.trafficPattern ?? 'constant') === 'sine'}
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1">
+                <label class={labelCls}>Amplitude</label>
+                <input type="number" min="0.01" max="1" step="0.05" class="{inputCls} font-mono"
+                  value={selectedNode.data.sineAmplitude ?? 0.5}
+                  on:change={(e) => patch({ sineAmplitude: numVal(e) })}
+                />
+              </div>
+              <div class="space-y-1">
+                <label class={labelCls}>Period (ticks)</label>
+                <input type="number" min="10" max="10000" step="10" class="{inputCls} font-mono"
+                  value={selectedNode.data.sinePeriodTicks ?? 400}
+                  on:change={(e) => patch({ sinePeriodTicks: numVal(e) })}
+                />
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400">
+              Oscillates {Math.max(0, Math.round(selectedNode.data.rps * (1 - (selectedNode.data.sineAmplitude ?? 0.5)))).toLocaleString()}–{Math.round(selectedNode.data.rps * (1 + (selectedNode.data.sineAmplitude ?? 0.5))).toLocaleString()}/s
+            </p>
+          {/if}
         </div>
 
       {:else if selectedNode.data.kind === 'server'}
@@ -405,8 +472,19 @@
         </div>
       {/if}
 
-      <!-- Delete -->
-      <div class="pt-2 border-t border-slate-100">
+      <!-- Chaos / Delete -->
+      <div class="pt-2 border-t border-slate-100 space-y-2">
+        {#if running && $selectedNodeId}
+          <button
+            class="w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors border
+                   {$failedNodes.has($selectedNodeId)
+                     ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                     : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'}"
+            on:click={() => $selectedNodeId && toggleNodeFailed($selectedNodeId)}
+          >
+            {$failedNodes.has($selectedNodeId) ? '↑ Restore node' : '⚡ Kill node (chaos)'}
+          </button>
+        {/if}
         <button
           class="w-full px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500
                  hover:text-red-600 text-xs font-medium transition-colors border border-red-100"

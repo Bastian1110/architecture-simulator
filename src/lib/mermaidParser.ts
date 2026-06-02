@@ -267,7 +267,17 @@ function applyParams(data: NodeParams, raw: RawParams): NodeParams {
   const str = (k: string, fb: string) => raw[k] ?? fb
   switch (data.kind) {
     case 'client':
-      return { ...data, rps: num('rps', data.rps), subtype: str('subtype', data.subtype) as any }
+      return { ...data,
+        rps: num('rps', data.rps),
+        subtype: str('subtype', data.subtype) as any,
+        trafficPattern: str('trafficPattern', data.trafficPattern ?? 'constant') as any,
+        rampDurationTicks: num('rampDurationTicks', data.rampDurationTicks ?? 300),
+        spikeFactor: num('spikeFactor', data.spikeFactor ?? 5),
+        spikeDurationTicks: num('spikeDurationTicks', data.spikeDurationTicks ?? 30),
+        spikeIntervalTicks: num('spikeIntervalTicks', data.spikeIntervalTicks ?? 200),
+        sineAmplitude: num('sineAmplitude', data.sineAmplitude ?? 0.5),
+        sinePeriodTicks: num('sinePeriodTicks', data.sinePeriodTicks ?? 400),
+      }
     case 'loadBalancer':
       return { ...data, algorithm: str('algorithm', data.algorithm) as any, maxRPS: num('maxRPS', data.maxRPS) }
     case 'server':

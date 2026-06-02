@@ -1,4 +1,4 @@
-import type { AppNode, AppEdge, NodeMetrics, NodeStatus, LBAlgorithm } from '../types'
+import type { AppNode, AppEdge, NodeMetrics, NodeStatus, LBAlgorithm, TrafficPattern } from '../types'
 
 export interface TickResult {
   nodeMetrics: Map<string, NodeMetrics>
@@ -50,6 +50,35 @@ function pickTarget(
   }
 
   return outgoing[Math.floor(Math.random() * outgoing.length)]
+}
+
+interface ClientLike {
+  rps: number
+  trafficPattern?: TrafficPattern
+  rampDurationTicks?: number
+  spikeFactor?: number
+  spikeDurationTicks?: number
+  spikeIntervalTicks?: number
+  sineAmplitude?: number
+  sinePeriodTicks?: number
+}
+
+function effectiveRPS(d: ClientLike, tick: number): number {
+  const rps = d.rps
+  switch (d.trafficPattern ?? 'constant') {
+    case 'ramp':
+      return Math.round(rps * Math.min(1, tick / (d.rampDurationTicks ?? 300)))
+    case 'spike': {
+      const phase = tick % (d.spikeIntervalTicks ?? 200)
+      return phase < (d.spikeDurationTicks ?? 30) ? Math.round(rps * (d.spikeFactor ?? 5)) : rps
+    }
+    case 'sine': {
+      const wave = Math.sin(2 * Math.PI * tick / (d.sinePeriodTicks ?? 400))
+      return Math.max(0, Math.round(rps * (1 + (d.sineAmplitude ?? 0.5) * wave)))
+    }
+    default:
+      return rps
+  }
 }
 
 function serverTotalMs(d: { processingTimeMs: number; middleware?: Array<{ latencyMs: number }> }): number {
@@ -108,8 +137,15 @@ function routeRequest(
   counters: Map<string, number>,
   tickMs: number,
   depth: number,
+  failedNodeIds: Set<string>,
 ): RouteResult {
   if (depth > 16) return { latency: 0, errored: false }
+
+  if (failedNodeIds.has(nodeId)) {
+    const load = nodeLoads.get(nodeId)
+    if (load) { load.handled++; load.errors++ }
+    return { latency: 0, errored: true }
+  }
 
   const node = nodes.find(n => n.id === nodeId)
   if (!node) return { latency: 0, errored: false }
@@ -156,7 +192,7 @@ function routeRequest(
       // Required side calls (e.g. auth server, validation service)
       for (const reqEdge of getRequiredOutgoing(nodeId, edges)) {
         edgeLoads.set(reqEdge.id, (edgeLoads.get(reqEdge.id) ?? 0) + 1)
-        const side = routeRequest(reqEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1)
+        const side = routeRequest(reqEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1, failedNodeIds)
         latency += side.latency
         if (side.errored) errored = true
       }
@@ -187,7 +223,7 @@ function routeRequest(
       // Required side calls (e.g. per-container DB calls)
       for (const reqEdge of getRequiredOutgoing(nodeId, edges)) {
         edgeLoads.set(reqEdge.id, (edgeLoads.get(reqEdge.id) ?? 0) + 1)
-        const side = routeRequest(reqEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1)
+        const side = routeRequest(reqEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1, failedNodeIds)
         latency += side.latency
         if (side.errored) errored = true
       }
@@ -204,7 +240,7 @@ function routeRequest(
   if (nextEdge) {
     edgeLoads.set(nextEdge.id, (edgeLoads.get(nextEdge.id) ?? 0) + 1)
     const downstream = routeRequest(
-      nextEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1
+      nextEdge.target, nodes, edges, nodeLoads, edgeLoads, counters, tickMs, depth + 1, failedNodeIds
     )
     return { latency: latency + downstream.latency, errored: errored || downstream.errored }
   }
@@ -228,6 +264,8 @@ export function runTick(
   tickMs: number,
   accumulators: Map<string, number>,
   roundRobinCounters: Map<string, number>,
+  currentTick: number,
+  failedNodeIds: Set<string>,
 ): TickResult {
   const nodeLoads = new Map<string, { handled: number; capacity: number; latency: number; errors: number }>()
   const edgeLoads = new Map<string, number>()
@@ -244,7 +282,8 @@ export function runTick(
 
   const clients = nodes.filter(n => n.data.kind === 'client')
   for (const client of clients) {
-    const rps = (client.data as { rps: number }).rps
+    if (failedNodeIds.has(client.id)) continue
+    const rps = effectiveRPS(client.data as ClientLike, currentTick)
     const prev = newAccumulators.get(client.id) ?? 0
     const next = prev + rps * tickMs / 1000
     const target = Math.floor(next)
@@ -259,7 +298,7 @@ export function runTick(
     let batchErrors = 0
 
     for (let i = 0; i < count; i++) {
-      const result = routeRequest(client.id, nodes, edges, nodeLoads, edgeLoads, newCounters, tickMs, 0)
+      const result = routeRequest(client.id, nodes, edges, nodeLoads, edgeLoads, newCounters, tickMs, 0, failedNodeIds)
       batchLatency += result.latency
       if (result.errored) batchErrors++
     }
@@ -291,12 +330,14 @@ export function runTick(
   for (const node of nodes) {
     const load = nodeLoads.get(node.id)!
     const d = node.data
+    const isFailed = failedNodeIds.has(node.id)
 
     let avgLatency = load.handled > 0 ? load.latency / load.handled : 0
     let errorRate = load.handled > 0 ? load.errors / load.handled : 0
+    let utilization = 0
 
-    if (load.capacity !== Infinity && load.handled > 0) {
-      const util = load.handled / load.capacity
+    if (!isFailed && load.capacity !== Infinity && load.handled > 0) {
+      utilization = load.handled / load.capacity
       let parallelism = 0
 
       if (d.kind === 'server') parallelism = d.cpuCores
@@ -305,8 +346,7 @@ export function runTick(
       else if (d.kind === 'orchestrator') parallelism = d.maxInstances * d.instanceCpuCores
 
       if (parallelism > 0) {
-        const { latencyMultiplier, extraErrorRate } = computeQueueingEffect(util, parallelism)
-        // Accumulate the extra queueing delay into the global latency total.
+        const { latencyMultiplier, extraErrorRate } = computeQueueingEffect(utilization, parallelism)
         adjustedTotalLatency += avgLatency * (latencyMultiplier - 1) * load.handled
         avgLatency *= latencyMultiplier
         errorRate = Math.min(1, errorRate + extraErrorRate)
@@ -316,8 +356,9 @@ export function runTick(
     nodeMetrics.set(node.id, {
       rps: Math.round(load.handled / tickSeconds),
       avgLatencyMs: Math.round(avgLatency),
-      errorRate,
-      status: computeStatus(load.handled, load.capacity),
+      errorRate: isFailed ? 1 : errorRate,
+      status: isFailed ? 'overloaded' : computeStatus(load.handled, load.capacity),
+      utilization: isFailed ? 1 : Math.min(2, utilization),
     })
   }
 

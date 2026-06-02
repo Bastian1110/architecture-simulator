@@ -17,8 +17,10 @@
   import {
     simStatus,
     simSpeed,
+    simTick,
     requestAccumulators,
     roundRobinCounters,
+    failedNodes,
     applyTickResult,
   } from './stores/simStore'
   import { runTick } from './simulation/engine'
@@ -35,7 +37,7 @@
 
     if (currentNodes.length === 0) return
 
-    const result = runTick(currentNodes, currentEdges, 100, accumulators, counters)
+    const result = runTick(currentNodes, currentEdges, 100, accumulators, counters, get(simTick), get(failedNodes))
     applyTickResult(result)
     updateEdgeTraffic(result.edgeTraffic)
   }

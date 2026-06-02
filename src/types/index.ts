@@ -5,6 +5,7 @@ export type NodeStatus = 'idle' | 'active' | 'stressed' | 'overloaded'
 export type LBAlgorithm = 'roundRobin' | 'leastConnections' | 'random'
 export type Protocol = 'http' | 'websocket' | 'grpc' | 'tcp'
 export type OrchType = 'kubernetes' | 'ecs' | 'swarm' | 'nomad'
+export type TrafficPattern = 'constant' | 'ramp' | 'spike' | 'sine'
 
 export interface MiddlewareStep {
   id: string
@@ -17,6 +18,13 @@ export interface ClientParams {
   label: string
   subtype: 'browser' | 'mobile'
   rps: number
+  trafficPattern: TrafficPattern
+  rampDurationTicks: number
+  spikeFactor: number
+  spikeDurationTicks: number
+  spikeIntervalTicks: number
+  sineAmplitude: number
+  sinePeriodTicks: number
 }
 
 export interface LoadBalancerParams {
@@ -106,6 +114,7 @@ export interface NodeMetrics {
   avgLatencyMs: number
   errorRate: number
   status: NodeStatus
+  utilization: number
 }
 
 export interface TimeSeriesPoint {
@@ -121,6 +130,13 @@ export const DEFAULT_NODE_DATA: Record<NodeKind, NodeParams> = {
     label: 'Client',
     subtype: 'browser',
     rps: 100,
+    trafficPattern: 'constant',
+    rampDurationTicks: 300,
+    spikeFactor: 5,
+    spikeDurationTicks: 30,
+    spikeIntervalTicks: 200,
+    sineAmplitude: 0.5,
+    sinePeriodTicks: 400,
   },
   loadBalancer: {
     kind: 'loadBalancer',

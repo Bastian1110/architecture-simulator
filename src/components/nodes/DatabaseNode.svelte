@@ -3,6 +3,7 @@
   import { Database } from 'lucide-svelte'
   import { nodeMetrics, simStatus } from '../../stores/simStore'
   import { selectedNodeId } from '../../stores/graphStore'
+  import FailedOverlay from './FailedOverlay.svelte'
   import type { DatabaseParams } from '../../types'
 
   export let id: string
@@ -17,7 +18,8 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="arch-node status-{status} {selected ? 'selected' : ''}" on:click={handleClick}>
+<div class="arch-node status-{status} {selected ? 'selected' : ''} relative" on:click={handleClick}>
+  <FailedOverlay {id} />
   <Handle type="target" position={Position.Left} />
   <Handle type="source" position={Position.Right} />
 

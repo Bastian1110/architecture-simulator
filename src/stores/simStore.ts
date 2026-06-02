@@ -10,6 +10,17 @@ export const simTick = writable<number>(0)
 // Per-node live metrics
 export const nodeMetrics = writable<Map<string, NodeMetrics>>(new Map())
 
+// Nodes currently marked as failed (chaos mode)
+export const failedNodes = writable<Set<string>>(new Set())
+
+export function toggleNodeFailed(id: string) {
+  failedNodes.update(s => {
+    const next = new Set(s)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+}
+
 // Rolling time-series (last 120 points) — used by charts
 export const timeSeries = writable<TimeSeriesPoint[]>([])
 // Full history for the current run (capped at 10 000 points)
@@ -33,6 +44,7 @@ export function resetSim() {
   nodeMetrics.set(new Map())
   timeSeries.set([])
   runHistory.set([])
+  failedNodes.set(new Set())
   requestAccumulators.set(new Map())
   roundRobinCounters.set(new Map())
 }

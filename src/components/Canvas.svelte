@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte'
   import {
     SvelteFlow,
     Background,
@@ -87,6 +88,31 @@
     selectedEdgeId.set(null)
   }
 
+  // ── Touch / Pencil drop from toolbar ─────────────────────────────────────
+  function handleTouchDrop(e: Event) {
+    const { clientX, clientY, kind, subtype } = (e as CustomEvent).detail
+    const pos = getFlowPosition(clientX, clientY)
+    const id = addNode(kind, pos)
+    if (subtype && kind === 'client') updateNodeData(id, { subtype })
+  }
+
+  function handleTouchTap(e: Event) {
+    const { kind, subtype } = (e as CustomEvent).detail
+    const pos = { x: 260 + Math.random() * 140, y: 120 + Math.random() * 100 }
+    const id = addNode(kind, pos)
+    if (subtype && kind === 'client') updateNodeData(id, { subtype })
+  }
+
+  onMount(() => {
+    flowEl.addEventListener('toolbar-touch-drop', handleTouchDrop)
+    document.addEventListener('toolbar-touch-tap', handleTouchTap)
+  })
+
+  onDestroy(() => {
+    flowEl?.removeEventListener('toolbar-touch-drop', handleTouchDrop)
+    document.removeEventListener('toolbar-touch-tap', handleTouchTap)
+  })
+
   const nodeColorMap: Record<string, string> = {
     client: '#3b82f6',
     server: '#10b981',
@@ -118,6 +144,7 @@
     fitView
     panOnScroll={true}
     panOnScrollMode="free"
+    panOnDrag={true}
     zoomOnScroll={false}
     zoomOnPinch={true}
     on:connect={handleConnect}
@@ -154,7 +181,7 @@
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div class="text-center">
         <div class="text-slate-300 mb-2"><Network size={32} /></div>
-        <p class="text-sm text-slate-400">Drag components from the sidebar</p>
+        <p class="text-sm text-slate-400">Drag or tap components from the sidebar</p>
       </div>
     </div>
   {/if}

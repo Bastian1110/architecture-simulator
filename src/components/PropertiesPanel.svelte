@@ -1,6 +1,7 @@
 <script lang="ts">
   import { nodes, edges, selectedNodeId, selectedEdgeId, updateNodeData, updateEdgeData, deleteNode } from '../stores/graphStore'
   import { nodeMetrics, simStatus, failedNodes, toggleNodeFailed } from '../stores/simStore'
+  import NumberInput from './NumberInput.svelte'
   import type { NodeParams, MiddlewareStep } from '../types'
 
   $: selectedNode = $selectedNodeId ? $nodes.find(n => n.id === $selectedNodeId) : null
@@ -33,7 +34,8 @@
     overloaded: 'text-red-500',
   }
 
-  const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-slate-400 transition-colors"
+  const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-slate-400 transition-colors"
+  const numCls   = "flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-md px-2 py-2 text-sm font-mono text-slate-800 focus:outline-none focus:border-slate-400 transition-colors"
   const labelCls = "text-xs text-slate-500 font-medium"
 
   // Log-scale helpers for the RPS slider (1 → 100 000)
@@ -79,7 +81,9 @@
     <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
       <span class="text-xs font-medium text-slate-600">{selectedNode.data.label}</span>
       <button
-        class="text-slate-300 hover:text-slate-500 text-sm leading-none transition-colors"
+        class="flex items-center justify-center w-8 h-8 -mr-1 rounded-lg text-slate-300
+               hover:text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors text-sm"
+        style="touch-action: manipulation;"
         on:click={() => selectedNodeId.set(null)}
       >✕</button>
     </div>
@@ -138,8 +142,10 @@
                 <span class="text-[10px] font-medium px-1.5 py-0.5 rounded" style="background: #e8f0fb; color: #204878;">live</span>
               {/if}
             </div>
-            <input type="number" min="1" max="100000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.rps}
+              min={1} max={100000} step={10}
               on:input={(e) => patch({ rps: numVal(e) })}
             />
             <input
@@ -165,8 +171,10 @@
           {#if (selectedNode.data.trafficPattern ?? 'constant') === 'ramp'}
             <div class="space-y-1">
               <label class={labelCls}>Ramp duration (ticks)</label>
-              <input type="number" min="10" max="10000" step="10" class="{inputCls} font-mono"
+              <NumberInput
+                cls={numCls}
                 value={selectedNode.data.rampDurationTicks ?? 300}
+                min={10} max={10000} step={10}
                 on:change={(e) => patch({ rampDurationTicks: numVal(e) })}
               />
               <p class="text-[10px] text-slate-400">Ticks to reach full RPS from zero</p>
@@ -175,23 +183,29 @@
             <div class="grid grid-cols-2 gap-2">
               <div class="space-y-1">
                 <label class={labelCls}>Spike factor</label>
-                <input type="number" min="1.1" max="100" step="0.5" class="{inputCls} font-mono"
+                <NumberInput
+                  cls={numCls}
                   value={selectedNode.data.spikeFactor ?? 5}
+                  min={1.1} max={100} step={0.5}
                   on:change={(e) => patch({ spikeFactor: numVal(e) })}
                 />
               </div>
               <div class="space-y-1">
                 <label class={labelCls}>Duration (ticks)</label>
-                <input type="number" min="1" max="1000" step="5" class="{inputCls} font-mono"
+                <NumberInput
+                  cls={numCls}
                   value={selectedNode.data.spikeDurationTicks ?? 30}
+                  min={1} max={1000} step={5}
                   on:change={(e) => patch({ spikeDurationTicks: numVal(e) })}
                 />
               </div>
             </div>
             <div class="space-y-1">
               <label class={labelCls}>Interval (ticks)</label>
-              <input type="number" min="10" max="10000" step="10" class="{inputCls} font-mono"
+              <NumberInput
+                cls={numCls}
                 value={selectedNode.data.spikeIntervalTicks ?? 200}
+                min={10} max={10000} step={10}
                 on:change={(e) => patch({ spikeIntervalTicks: numVal(e) })}
               />
               <p class="text-[10px] text-slate-400">
@@ -202,15 +216,19 @@
             <div class="grid grid-cols-2 gap-2">
               <div class="space-y-1">
                 <label class={labelCls}>Amplitude</label>
-                <input type="number" min="0.01" max="1" step="0.05" class="{inputCls} font-mono"
+                <NumberInput
+                  cls={numCls}
                   value={selectedNode.data.sineAmplitude ?? 0.5}
+                  min={0.01} max={1} step={0.05}
                   on:change={(e) => patch({ sineAmplitude: numVal(e) })}
                 />
               </div>
               <div class="space-y-1">
                 <label class={labelCls}>Period (ticks)</label>
-                <input type="number" min="10" max="10000" step="10" class="{inputCls} font-mono"
+                <NumberInput
+                  cls={numCls}
                   value={selectedNode.data.sinePeriodTicks ?? 400}
+                  min={10} max={10000} step={10}
                   on:change={(e) => patch({ sinePeriodTicks: numVal(e) })}
                 />
               </div>
@@ -225,22 +243,28 @@
         <div class="space-y-3">
           <div class="space-y-1">
             <label class={labelCls}>CPU Cores</label>
-            <input type="number" min="1" max="1024" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.cpuCores}
+              min={1} max={1024} step={1}
               on:change={(e) => patch({ cpuCores: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Base Processing Time (ms)</label>
-            <input type="number" min="1" max="60000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.processingTimeMs}
+              min={1} max={60000} step={1}
               on:change={(e) => patch({ processingTimeMs: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Error Rate (0–1)</label>
-            <input type="number" min="0" max="1" step="0.01" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.errorRate}
+              min={0} max={1} step={0.01}
               on:change={(e) => patch({ errorRate: numVal(e) })}
             />
           </div>
@@ -250,7 +274,8 @@
             <div class="flex items-center justify-between">
               <label class={labelCls}>Pipeline steps</label>
               <button
-                class="text-xs font-medium" style="color: #204878;"
+                class="text-xs font-medium px-2 py-1 rounded hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                style="color: #204878; touch-action: manipulation;"
                 on:click={addStep}
               >+ Add</button>
             </div>
@@ -260,19 +285,20 @@
               {#each selectedNode.data.middleware as step (step.id)}
                 <div class="flex items-center gap-1.5">
                   <input
-                    class="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-slate-400"
+                    class="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-2 text-xs text-slate-700 focus:outline-none focus:border-slate-400"
                     value={step.name}
                     on:input={(e) => updateStepName(step.id, e)}
                   />
                   <input
                     type="number" min="0" max="60000"
-                    class="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-slate-700 focus:outline-none focus:border-slate-400"
+                    class="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-slate-400"
                     value={step.latencyMs}
                     on:change={(e) => updateStepLatency(step.id, e)}
                   />
                   <span class="text-[10px] text-slate-400">ms</span>
                   <button
-                    class="text-slate-300 hover:text-red-400 transition-colors text-sm leading-none"
+                    class="flex items-center justify-center w-7 h-7 rounded text-slate-300 hover:text-red-400 active:text-red-500 transition-colors"
+                    style="touch-action: manipulation;"
                     on:click={() => removeStep(step.id)}
                   >✕</button>
                 </div>
@@ -307,22 +333,28 @@
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Query Time (ms)</label>
-            <input type="number" min="1" max="60000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.queryTimeMs}
+              min={1} max={60000} step={1}
               on:change={(e) => patch({ queryTimeMs: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Max Connections</label>
-            <input type="number" min="1" max="10000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.maxConnections}
+              min={1} max={10000} step={1}
               on:change={(e) => patch({ maxConnections: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Error Rate (0–1)</label>
-            <input type="number" min="0" max="1" step="0.01" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.errorRate}
+              min={0} max={1} step={0.01}
               on:change={(e) => patch({ errorRate: numVal(e) })}
             />
           </div>
@@ -332,15 +364,19 @@
         <div class="space-y-3">
           <div class="space-y-1">
             <label class={labelCls}>Hit Rate (0–1)</label>
-            <input type="number" min="0" max="1" step="0.01" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.hitRate}
+              min={0} max={1} step={0.01}
               on:change={(e) => patch({ hitRate: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Lookup Time (ms)</label>
-            <input type="number" min="0" max="10000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.lookupTimeMs}
+              min={0} max={10000} step={1}
               on:change={(e) => patch({ lookupTimeMs: numVal(e) })}
             />
           </div>
@@ -350,15 +386,19 @@
         <div class="space-y-3">
           <div class="space-y-1">
             <label class={labelCls}>Hit Rate (0–1)</label>
-            <input type="number" min="0" max="1" step="0.01" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.hitRate}
+              min={0} max={1} step={0.01}
               on:change={(e) => patch({ hitRate: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Edge Latency (ms)</label>
-            <input type="number" min="1" max="2000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.edgeLatencyMs}
+              min={1} max={2000} step={1}
               on:change={(e) => patch({ edgeLatencyMs: numVal(e) })}
             />
           </div>
@@ -377,22 +417,28 @@
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Read Latency (ms)</label>
-            <input type="number" min="1" max="60000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.readLatencyMs}
+              min={1} max={60000} step={1}
               on:change={(e) => patch({ readLatencyMs: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Write Latency (ms)</label>
-            <input type="number" min="1" max="60000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.writeLatencyMs}
+              min={1} max={60000} step={1}
               on:change={(e) => patch({ writeLatencyMs: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Error Rate (0–1)</label>
-            <input type="number" min="0" max="1" step="0.001" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.errorRate}
+              min={0} max={1} step={0.001}
               on:change={(e) => patch({ errorRate: numVal(e) })}
             />
           </div>
@@ -412,37 +458,47 @@
           <div class="grid grid-cols-2 gap-2">
             <div class="space-y-1">
               <label class={labelCls}>Min pods</label>
-              <input type="number" min="0" max="10000" step="1" class="{inputCls} font-mono"
+              <NumberInput
+                cls={numCls}
                 value={selectedNode.data.minInstances}
+                min={0} max={10000} step={1}
                 on:change={(e) => patch({ minInstances: numVal(e) })}
               />
             </div>
             <div class="space-y-1">
               <label class={labelCls}>Max pods</label>
-              <input type="number" min="1" max="10000" step="1" class="{inputCls} font-mono"
+              <NumberInput
+                cls={numCls}
                 value={selectedNode.data.maxInstances}
+                min={1} max={10000} step={1}
                 on:change={(e) => patch({ maxInstances: numVal(e) })}
               />
             </div>
           </div>
           <div class="space-y-1">
             <label class={labelCls}>CPU cores / pod</label>
-            <input type="number" min="1" max="256" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.instanceCpuCores}
+              min={1} max={256} step={1}
               on:change={(e) => patch({ instanceCpuCores: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Processing Time (ms / pod)</label>
-            <input type="number" min="1" max="60000" step="1" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.processingTimeMs}
+              min={1} max={60000} step={1}
               on:change={(e) => patch({ processingTimeMs: numVal(e) })}
             />
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Pods per concurrent user</label>
-            <input type="number" min="0.001" max="100" step="0.001" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.containerPerSession}
+              min={0.001} max={100} step={0.001}
               on:change={(e) => patch({ containerPerSession: numVal(e) })}
             />
             {#if running && metrics}
@@ -458,8 +514,10 @@
           </div>
           <div class="space-y-1">
             <label class={labelCls}>Error Rate (0–1)</label>
-            <input type="number" min="0" max="1" step="0.01" class="{inputCls} font-mono"
+            <NumberInput
+              cls={numCls}
               value={selectedNode.data.errorRate}
+              min={0} max={1} step={0.01}
               on:change={(e) => patch({ errorRate: numVal(e) })}
             />
           </div>
@@ -476,18 +534,20 @@
       <div class="pt-2 border-t border-slate-100 space-y-2">
         {#if running && $selectedNodeId}
           <button
-            class="w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors border
+            class="w-full px-3 py-2.5 rounded-lg text-xs font-medium transition-colors border
                    {$failedNodes.has($selectedNodeId)
-                     ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                     : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'}"
+                     ? 'bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 border-emerald-200'
+                     : 'bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 border-amber-200'}"
+            style="touch-action: manipulation;"
             on:click={() => $selectedNodeId && toggleNodeFailed($selectedNodeId)}
           >
             {$failedNodes.has($selectedNodeId) ? '↑ Restore node' : '⚡ Kill node (chaos)'}
           </button>
         {/if}
         <button
-          class="w-full px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500
+          class="w-full px-3 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-500
                  hover:text-red-600 text-xs font-medium transition-colors border border-red-100"
+          style="touch-action: manipulation;"
           on:click={() => { if ($selectedNodeId) deleteNode($selectedNodeId); selectedNodeId.set(null) }}
         >
           Delete node
@@ -502,7 +562,9 @@
     <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
       <span class="text-xs font-medium text-slate-600">Connection</span>
       <button
-        class="text-slate-300 hover:text-slate-500 text-sm leading-none transition-colors"
+        class="flex items-center justify-center w-8 h-8 -mr-1 rounded-lg text-slate-300
+               hover:text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors text-sm"
+        style="touch-action: manipulation;"
         on:click={() => selectedEdgeId.set(null)}
       >✕</button>
     </div>
@@ -541,7 +603,7 @@
         <label class="flex items-start gap-2.5 cursor-pointer">
           <input
             type="checkbox"
-            class="mt-0.5 rounded"
+            class="mt-0.5 rounded w-4 h-4"
             checked={selectedEdge.data?.required ?? false}
             on:change={(e) => patchEdge({ required: checkVal(e) })}
           />
